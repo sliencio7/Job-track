@@ -14,163 +14,180 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            /* Light gray background matching image */
+            background-color: #f3f4f6; /* Light gray background matching image */
+            display: flex; /* Use flexbox for main layout */
+            min-height: 100vh; /* Ensure body takes full viewport height */
         }
-
         /* Custom styles for better aesthetics, matching the provided image */
         .shadow-custom {
             /* Mimics the softer shadow in the image */
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
         }
-
         .rounded-xl {
-            border-radius: 1rem;
-            /* Consistent large radius */
+            border-radius: 1rem; /* Consistent large radius */
         }
-
         .rounded-lg {
-            border-radius: 0.5rem;
-            /* Standard radius for smaller elements */
+            border-radius: 0.5rem; /* Standard radius for smaller elements */
         }
-
         .transition-colors {
             transition-property: background-color, border-color, color, fill, stroke;
             transition-duration: 200ms;
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         }
-
         /* Modal animations for a smoother appearance */
         .modal-enter {
             opacity: 0;
             transform: scale(0.9);
         }
-
         .modal-enter-active {
             opacity: 1;
             transform: scale(1);
             transition: opacity 0.3s ease-out, transform 0.3s ease-out;
         }
-
         .modal-exit {
             opacity: 1;
             transform: scale(1);
         }
-
         .modal-exit-active {
             opacity: 0;
             transform: scale(0.9);
             transition: opacity 0.3s ease-in, transform 0.3s ease-in;
         }
-
         /* Ensure chart container respects height for D3.js */
         #submissions-chart-container {
-            height: 320px;
-            /* Equivalent to h-80 in Tailwind, for consistent height */
+            height: 256px; /* h-64 equivalent in Tailwind for charts */
             width: 100%;
         }
-
         /* Mobile specific adjustments for the modal for better usability */
-        #job-modal .modal-content {
-            max-height: 90vh;
-            /* Limit height to 90% of viewport height */
-            overflow-y: auto;
-            /* Enable vertical scrolling */
-            -webkit-overflow-scrolling: touch;
-            /* Smooth scrolling on iOS */
-            padding: 1rem;
-            /* Smaller padding on mobile */
+        #job-modal .modal-content, #messageBoxModal .modal-content {
+            max-height: 90vh; /* Limit height to 90% of viewport height */
+            overflow-y: auto; /* Enable vertical scrolling */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            padding: 1rem; /* Smaller padding on mobile */
         }
-
-        @media (min-width: 640px) {
-
-            /* sm breakpoint */
-            #job-modal .modal-content {
-                padding: 2rem;
-                /* Restore larger padding on larger screens */
-                margin-left: auto;
-                /* Center on larger screens */
+        @media (min-width: 640px) { /* sm breakpoint */
+            #job-modal .modal-content, #messageBoxModal .modal-content {
+                padding: 2rem; /* Restore larger padding on larger screens */
+                margin-left: auto; /* Center on larger screens */
                 margin-right: auto;
             }
         }
-
         /* Hide scrollbar but allow scrolling */
         body::-webkit-scrollbar {
             display: none;
         }
-
         body {
-            -ms-overflow-style: none;
-            /* IE and Edge */
-            scrollbar-width: none;
-            /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+
+        /* Sidebar specific styles */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 40; /* Above main content, below modals */
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        /* Backdrop for sidebar on mobile */
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 30;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .sidebar-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Hide sidebar by default on small screens */
+        @media (max-width: 767px) { /* md breakpoint for larger screens */
+            .sidebar {
+                width: 256px; /* w-64 */
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Larger shadow */
+            }
+            /* Adjust main content to move right on sidebar open */
+            body.sidebar-open {
+                overflow: hidden; /* Prevent scrolling body when sidebar is open */
+            }
+        }
+
+        /* Always show sidebar on larger screens */
+        @media (min-width: 768px) { /* md breakpoint and up */
+            .sidebar {
+                position: relative; /* Back to normal flow */
+                transform: translateX(0%); /* Always visible */
+                flex-shrink: 0; /* Don't shrink */
+                width: 256px; /* w-64 */
+            }
+            .main-content-wrapper {
+                margin-left: 0; /* No margin shift needed as sidebar is in flow */
+            }
+            .menu-button {
+                display: none; /* Hide hamburger menu on larger screens */
+            }
+            .sidebar-backdrop {
+                display: none; /* Hide backdrop on larger screens */
+            }
         }
     </style>
 </head>
+<body class="bg-gray-100">
 
-<body class="flex min-h-screen bg-gray-100">
+    <!-- Mobile Menu Button (Hamburger Icon) -->
+    <button id="menu-toggle" class="menu-button fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-md md:hidden">
+        <i class="fas fa-bars text-xl"></i>
+    </button>
 
     <!-- Sidebar -->
-    <aside class="w-64 bg-white text-gray-800 flex flex-col p-4 shadow-custom rounded-r-xl">
+    <aside id="main-sidebar" class="sidebar w-64 bg-white text-gray-800 flex-col p-4 shadow-custom rounded-r-xl hidden md:flex">
         <div class="text-2xl font-extrabold mb-8 text-blue-700 tracking-wide">Job Track</div>
         <nav class="flex-1">
             <ul>
                 <li class="mb-2">
-                    <a href="#"
-                        class="flex items-center p-3 rounded-lg text-blue-700 font-semibold bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
-                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z">
-                            </path>
-                        </svg>
+                    <a href="#" class="flex items-center p-3 rounded-lg text-blue-700 font-semibold bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
                         仪表盘
                     </a>
                 </li>
                 <li class="mb-2">
-                    <a href="#"
-                        class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200">
-                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM13 7a2 2 0 00-2-2h2a2 2 0 002-2V5a2 2 0 00-2-2h-2zm0 8a2 2 0 00-2-2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z">
-                            </path>
-                        </svg>
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM13 7a2 2 0 00-2-2h2a2 2 0 002-2V5a2 2 0 00-2-2h-2zm0 8a2 2 0 00-2-2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z"></path></svg>
                         所有岗位
                     </a>
                 </li>
                 <li class="mb-2">
-                    <a href="#"
-                        class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200">
-                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 5a2 2 0 012-2h2V3a1 1 0 110 2h2V3a1 1 0 110 2h2V3a1 1 0 110 2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zM10 9a1 1 0 011 1v4a1 1 0 11-2 0v-4a1 1 0 011-1z">
-                            </path>
-                        </svg>
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 5a2 2 0 012-2h2V3a1 1 0 110 2h2V3a1 1 0 110 2h2V3a1 1 0 110 2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zM10 9a1 1 0 011 1v4a1 1 0 11-2 0v-4a1 1 0 011-1z"></path></svg>
                         提醒
                     </a>
                 </li>
                 <li class="mb-2">
-                    <button id="futureModulesToggle"
-                        class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 w-full text-left">
-                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM5 9a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z">
-                            </path>
-                        </svg>
+                    <button id="futureModulesToggle" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 w-full text-left">
+                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM5 9a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"></path></svg>
                         未来集成模块
                         <span class="ml-auto" id="futureModulesArrow">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 9l-7 7-7-7"></path>
-                            </svg>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </span>
                     </button>
                     <ul id="futureModulesMenu" class="pl-8 mt-2 space-y-2 hidden">
-                        <li><a href="#"
-                                class="block p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">薪资分析</a>
-                        </li>
-                        <li><a href="#"
-                                class="block p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">面试模拟</a>
-                        </li>
+                        <li><a href="#" class="block p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">薪资分析</a></li>
+                        <li><a href="#" class="block p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">面试模拟</a></li>
                     </ul>
                 </li>
             </ul>
@@ -178,24 +195,14 @@
         <div class="mt-auto">
             <ul>
                 <li class="mb-2">
-                    <a href="#"
-                        class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200">
-                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M4 4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6zm2 4a1 1 0 00-1 1v3a1 1 0 001 1h8a1 1 0 001-1v-3a1 1 0 00-1-1H6z">
-                            </path>
-                        </svg>
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6zm2 4a1 1 0 00-1 1v3a1 1 0 001 1h8a1 1 0 001-1v-3a1 1 0 00-1-1H6z"></path></svg>
                         上手指南
                     </a>
                 </li>
                 <li class="mb-2">
-                    <a href="#"
-                        class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200">
-                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M11 3a1 1 0 100 2h2.07a1 1 0 00-.916.594l-2.433 4.394A1 1 0 009.682 11H7.5a1 1 0 100 2h2.07a1 1 0 00-.916.594l-2.433 4.394A1 1 0 006.018 19H17a1 1 0 100-2H6.018a1 1 0 00-.916.594z">
-                            </path>
-                        </svg>
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h2.07a1 1 0 00-.916.594l-2.433 4.394A1 1 0 009.682 11H7.5a1 1 0 100 2h2.07a1 1 0 00-.916.594l-2.433 4.394A1 1 0 006.018 19H17a1 1 0 100-2H6.018a1 1 0 00-.916.594z"></path></svg>
                         设置
                     </a>
                 </li>
@@ -206,107 +213,113 @@
         </div>
     </aside>
 
+    <!-- Sidebar Backdrop for mobile -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
     <!-- Main Content Area -->
-    <main class="flex-1 p-8 overflow-auto">
+    <main class="flex-1 p-4 md:p-8 overflow-auto">
 
         <!-- Top Row: Overview and User Info -->
-        <div class="mb-8">
-            <header class="flex justify-between items-center">
+        <div class="mb-6 md:mb-8 mt-12 md:mt-0"> <!-- Added top margin for mobile to clear hamburger menu -->
+            <header class="flex justify-between items-center flex-wrap gap-4">
                 <div>
-                    <h1 class="text-4xl font-extrabold text-gray-900 leading-tight">概览</h1>
-                    <p class="text-gray-600 mt-2">轻松管理您的求职进度。</p>
+                    <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">概览</h1>
+                    <p class="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">轻松管理您的求职进度。</p>
                 </div>
                 <div class="flex items-center">
-                    <span class="text-gray-500 text-sm mr-2">ID: <span id="headerUserId">加载中...</span></span>
-                    <div
-                        class="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-bold">
-                        AV</div>
+                    <span class="text-gray-500 text-xs md:text-sm mr-2">ID: <span id="headerUserId">加载中...</span></span>
+                    <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-bold text-sm md:text-base">AV</div>
                 </div>
             </header>
         </div>
 
-        <!-- Main Content Layout - Now Three Sections in the top row -->
-        <div class="space-y-6">
+        <!-- Main Content Layout -->
+        <div class="space-y-4 md:space-y-6">
             <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Job Parsing Section -->
-                <div class="bg-white p-6 rounded-xl shadow-custom animate-fadeIn">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">岗位解析</h2>
-                    <div class="flex flex-col gap-4 mb-4">
-                        <textarea id="jobParsingInput" placeholder="粘贴招聘链接或文本内容..."
-                            class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm h-24 resize-y"></textarea>
-                        <button id="parseAndAddBtn"
-                            class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-colors duration-200">
+                <div class="bg-white p-4 md:p-6 rounded-xl shadow-custom animate-fadeIn">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">岗位解析</h2>
+                    <div class="flex flex-col gap-3 md:gap-4 mb-3 md:mb-4">
+                        <textarea
+                            id="jobParsingInput"
+                            placeholder="粘贴招聘链接或文本内容..."
+                            class="flex-1 p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm h-20 md:h-24 resize-y text-sm"
+                        ></textarea>
+                        <button
+                            id="parseAndAddBtn"
+                            class="px-4 py-2 md:px-6 md:py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-colors duration-200 text-sm md:text-base"
+                        >
                             解析并添加岗位
                         </button>
                     </div>
-                    <p class="text-gray-500 text-sm">粘贴招聘网站链接或职位描述，智能识别岗位信息。</p>
+                    <p class="text-gray-500 text-xs md:text-sm">粘贴招聘网站链接或职位描述，智能识别岗位信息。</p>
                 </div>
 
-                <!-- Interview & Offer Summary (REVERTED TO 2 COLUMNS) -->
-                <div class="bg-white p-6 rounded-xl shadow-custom animate-fadeIn">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">面试与 Offer</h2>
+                <!-- Interview & Offer Summary -->
+                <div class="bg-white p-4 md:p-6 rounded-xl shadow-custom animate-fadeIn">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">面试与 Offer</h2>
                     <div class="grid grid-cols-2 gap-4">
                         <!-- Existing Interview Count Box -->
                         <div id="interview-count-box"
-                            class="bg-yellow-50 p-4 rounded-lg flex flex-col items-center justify-center border border-yellow-200 text-center cursor-pointer hover:bg-yellow-100 transition duration-200">
-                            <span class="text-4xl font-bold text-yellow-700" id="interview-count">0</span>
-                            <span class="text-lg text-yellow-600 mt-2">面试</span>
+                            class="bg-yellow-50 p-3 md:p-4 rounded-lg flex flex-col items-center justify-center border border-yellow-200 text-center cursor-pointer hover:bg-yellow-100 transition duration-200">
+                            <span class="text-3xl md:text-4xl font-bold text-yellow-700" id="interview-count">0</span>
+                            <span class="text-base md:text-lg text-yellow-600 mt-1 md:mt-2">面试</span>
                         </div>
                         <!-- Existing Offer Count Box -->
                         <div id="offer-count-box"
-                            class="bg-green-50 p-4 rounded-lg flex flex-col items-center justify-center border border-green-200 text-center cursor-pointer hover:bg-green-100 transition duration-200">
-                            <span class="text-4xl font-bold text-green-700" id="offer-count">0</span>
-                            <span class="text-lg text-green-600 mt-2">Offer</span>
+                            class="bg-green-50 p-3 md:p-4 rounded-lg flex flex-col items-center justify-center border border-green-200 text-center cursor-pointer hover:bg-green-100 transition duration-200">
+                            <span class="text-3xl md:text-4xl font-bold text-green-700" id="offer-count">0</span>
+                            <span class="text-base md:text-lg text-green-600 mt-1 md:mt-2">Offer</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Submission overview (chart) -->
-                <div class="bg-white p-6 rounded-xl shadow-custom flex flex-col animate-fadeIn">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">投递情况一览</h2>
-                    <div class="flex justify-around mb-4">
+                <div class="bg-white p-4 md:p-6 rounded-xl shadow-custom flex flex-col animate-fadeIn">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">投递情况一览</h2>
+                    <div class="flex justify-around mb-3 md:mb-4">
                         <button id="toggle-weekly"
-                            class="px-4 py-2 rounded-lg font-medium text-sm transition duration-200 bg-blue-100 text-blue-700 hover:bg-blue-200">近七日</button>
+                            class="px-3 py-1 md:px-4 md:py-2 rounded-lg font-medium text-xs md:text-sm transition duration-200 bg-blue-100 text-blue-700 hover:bg-blue-200">近七日</button>
                         <button id="toggle-monthly"
-                            class="px-4 py-2 rounded-lg font-medium text-sm transition duration-200 text-gray-600 hover:bg-gray-100">月度</button>
+                            class="px-3 py-1 md:px-4 md:py-2 rounded-lg font-medium text-xs md:text-sm transition duration-200 text-gray-600 hover:bg-gray-100">月度</button>
                     </div>
                     <!-- Monthly view selectors -->
-                    <div id="monthly-selectors" class="flex space-x-4 mb-4 justify-center hidden">
+                    <div id="monthly-selectors" class="flex space-x-2 md:space-x-4 mb-3 md:mb-4 justify-center hidden">
                         <label for="year-select" class="sr-only">选择年份</label>
                         <select id="year-select"
-                            class="px-4 py-2 rounded-md border border-gray-300 text-lg focus:ring-blue-500 focus:border-blue-500">
+                            class="px-3 py-1 md:px-4 md:py-2 rounded-md border border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500">
                         </select>
 
                         <label for="month-select" class="sr-only">选择月份</label>
                         <select id="month-select"
-                            class="px-4 py-2 rounded-md border border-gray-300 text-lg focus:ring-blue-500 focus:border-blue-500">
+                            class="px-3 py-1 md:px-4 md:py-2 rounded-md border border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500">
                         </select>
                     </div>
                     <!-- D3.js Chart Container -->
                     <div id="submissions-chart-container" class="flex-1 w-full h-48 flex items-center justify-center">
                         <svg id="submissions-chart" class="w-full h-full"></svg>
                     </div>
-                    <p id="no-chart-data-message" class="text-gray-500 mt-4 text-center hidden">当前月份没有投递记录。</p>
+                    <p id="no-chart-data-message" class="text-gray-500 mt-3 md:mt-4 text-center text-xs md:text-sm hidden">当前月份没有投递记录。</p>
                 </div>
             </section>
 
             <!-- Job list table (Full Width) -->
-            <section class="bg-white p-6 rounded-xl shadow-custom animate-fadeIn">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xl font-semibold text-gray-700">岗位情况</h3>
+            <section class="bg-white p-4 md:p-6 rounded-xl shadow-custom animate-fadeIn">
+                <div class="flex items-center justify-between mb-4 md:mb-6 flex-wrap gap-2">
+                    <h3 class="text-lg md:text-xl font-semibold text-gray-700">岗位情况</h3>
                     <button id="add-new-job-btn"
-                        class="bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 shadow-md focus:outline-none focus:ring-2 focus:ring-500 focus:ring-opacity-50">
-                        <i class="fas fa-plus mr-2"></i>添加新岗位
+                        class="bg-blue-600 text-white py-2 px-3 md:px-4 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 shadow-md focus:outline-none focus:ring-2 focus:ring-500 focus:ring-opacity-50 text-sm md:text-base">
+                        <i class="fas fa-plus mr-1 md:mr-2"></i>添加新岗位
                     </button>
                 </div>
 
                 <!-- Filter and sort area -->
-                <div class="flex flex-wrap items-center gap-4 mb-4">
+                <div class="flex flex-wrap items-center gap-2 md:gap-4 mb-4">
                     <input type="text" id="global-search-input" placeholder="全局搜索 (公司, 岗位, 关键词等)"
-                        class="flex-1 min-w-[200px] p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-400 text-gray-700">
+                        class="flex-1 min-w-[150px] md:min-w-[200px] p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-400 text-gray-700 text-sm">
 
                     <select id="filter-status"
-                        class="p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-400 text-gray-700">
+                        class="p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-400 text-gray-700 text-sm">
                         <option value="">所有状态</option>
                         <option value="投递">投递</option>
                         <option value="测评">测评</option>
@@ -320,63 +333,63 @@
                     </select>
 
                     <input type="date" id="filter-start-date"
-                        class="p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-400 text-gray-700">
-                    <span class="text-gray-500">至</span>
+                        class="p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-400 text-gray-700 text-sm">
+                    <span class="text-gray-500 text-sm">至</span>
                     <input type="date" id="filter-end-date"
-                        class="p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-400 text-gray-700">
+                        class="p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-400 text-gray-700 text-sm">
 
                     <button id="reset-filters"
-                        class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition duration-200">
+                        class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition duration-200 text-sm">
                         <i class="fas fa-times-circle mr-1"></i>重置筛选
                     </button>
                 </div>
 
                 <!-- Table container -->
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg cursor-pointer hover:bg-gray-100 transition duration-150 relative"
+                                <th class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg cursor-pointer hover:bg-gray-100 transition duration-150 relative"
                                     data-sort-key="time">
                                     投递时间<span
-                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
+                                        class="absolute right-1 md:right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
                                             class="fas fa-sort"></i></span>
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition duration-150 relative"
+                                <th class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition duration-150 relative"
                                     data-sort-key="company">
-                                    公司<span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
+                                    公司<span class="absolute right-1 md:right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
                                             class="fas fa-sort"></i></span>
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition duration-150 relative"
+                                <th class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition duration-150 relative"
                                     data-sort-key="position">
-                                    岗位<span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
+                                    岗位<span class="absolute right-1 md:right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
                                             class="fas fa-sort"></i></span>
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     关键词</th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     行业</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition duration-150 relative"
+                                <th class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition duration-150 relative"
                                     data-sort-key="status">
-                                    状态<span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
+                                    状态<span class="absolute right-1 md:right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
                                             class="fas fa-sort"></i></span>
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     地点</th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     备注</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg cursor-pointer hover:bg-gray-100 transition duration-150 relative"
+                                <th class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg cursor-pointer hover:bg-gray-100 transition duration-150 relative"
                                     data-sort-key="level">
                                     等级分类<span
-                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
+                                        class="absolute right-1 md:right-3 top-1/2 -translate-y-1/2 text-gray-400 sort-icon"><i
                                             class="fas fa-sort"></i></span>
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    class="px-4 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     操作</th>
                             </tr>
                         </thead>
@@ -385,1285 +398,1226 @@
                         </tbody>
                     </table>
                 </div>
-                <div id="no-records-message" class="text-center text-gray-500 mt-4 hidden">暂无岗位记录。点击“添加新岗位”开始记录吧！</div>
+                <div id="no-records-message" class="text-center text-gray-500 mt-4 text-sm hidden">暂无岗位记录。点击“添加新岗位”开始记录吧！</div>
             </section>
         </div>
     </main>
-    </div>
 
-    <!-- Modal for adding/editing jobs -->
-    <div id="job-modal"
-        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden modal-backdrop">
-        <div
-            class="bg-white p-4 sm:p-8 rounded-xl shadow-2xl w-full max-w-lg mx-4 modal-content transform transition-all modal-enter">
-            <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-6">添加新岗位</h3>
-            <form id="job-form" class="space-y-4">
-                <input type="hidden" id="editingJobId" value="">
-                <div>
-                    <label for="modal-time" class="block text-gray-700 text-sm font-medium mb-1">投递时间</label>
-                    <input type="date" id="modal-time"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
-                </div>
-                <div>
-                    <label for="modal-company" class="block text-gray-700 text-sm font-medium mb-1">公司</label>
-                    <input type="text" id="modal-company" placeholder="公司名称"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700"
-                        required>
-                </div>
-                <div>
-                    <label for="modal-position" class="block text-gray-700 text-sm font-medium mb-1">岗位</label>
-                    <input type="text" id="modal-position" placeholder="岗位名称"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700"
-                        required>
-                </div>
-                <!-- New: Job Link for parsed URLs -->
-                <div>
-                    <label for="modal-job-link" class="block text-gray-700 text-sm font-medium mb-1">岗位链接</label>
-                    <input type="url" id="modal-job-link"
-                        placeholder="例如：https://careers.google.com/jobs/results/12345/"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
-                </div>
-                <div>
-                    <label for="modal-keywords" class="block text-gray-700 text-sm font-medium mb-1">关键词</label>
-                    <input type="text" id="modal-keywords" placeholder="例如：前端, Vue, React"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
-                </div>
-                <div>
-                    <label for="modal-industry" class="block text-gray-700 text-sm font-medium mb-1">行业</label>
-                    <input type="text" id="modal-industry" placeholder="例如：互联网, 金融"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
-                </div>
-                <div>
-                    <label for="modal-status" class="block text-gray-700 text-sm font-medium mb-1">状态</label>
-                    <select id="modal-status"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
-                        <option value="投递">投递</option>
-                        <option value="测评">测评</option>
-                        <option value="笔试">笔试</option>
-                        <option value="一面">一面</option>
-                        <option value="二面">二面</option>
-                        <option value="终面">终面</option>
-                        <option value="HR面">HR面</option>
-                        <option value="OC">OC</option>
-                        <option value="拒绝">拒绝</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="modal-location" class="block text-gray-700 text-sm font-medium mb-1">地点</label>
-                    <input type="text" id="modal-location" placeholder="例如：上海, 远程"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
-                </div>
-                <div>
-                    <label for="modal-notes" class="block text-gray-700 text-sm font-medium mb-1">备注</label>
-                    <textarea id="modal-notes" placeholder="其他重要信息"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent h-20 resize-y text-gray-700"></textarea>
-                </div>
-                <div>
-                    <label for="modal-level" class="block text-gray-700 text-sm font-medium mb-1">等级分类</label>
-                    <select id="modal-level"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
-                        <option value="低">低</option>
-                        <option value="中">中</option>
-                        <option value="高">高</option>
-                    </select>
-                </div>
-
-                <div class="flex justify-end space-x-4 mt-6">
-                    <button type="button" id="cancel-modal-btn"
-                        class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-semibold hover:bg-gray-300 transition duration-200">
-                        取消
-                    </button>
-                    <button type="submit" id="save-job-btn"
-                        class="bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition duration-200">
-                        保存
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Custom Message Box Modal - Replaces alert/confirm -->
-    <div id="messageBoxModal"
-        class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm mx-4 transform transition-all modal-enter">
-            <h3 class="text-xl font-bold text-gray-900 mb-4" id="messageBoxTitle"></h3>
-            <p class="text-gray-700 mb-6" id="messageBoxContent"></p>
-            <div class="flex justify-end gap-3">
-                <button id="messageBoxCancelBtn"
-                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 hidden">取消</button>
-                <button id="messageBoxConfirmBtn"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">确定</button>
+<!-- Modal for adding/editing jobs -->
+<div id="job-modal"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden modal-backdrop">
+    <div class="bg-white p-4 sm:p-8 rounded-xl shadow-2xl w-11/12 max-w-sm md:max-w-lg mx-auto modal-content transform transition-all modal-enter">
+        <h3 id="modal-title" class="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">添加新岗位</h3>
+        <form id="job-form" class="space-y-3 md:space-y-4">
+            <input type="hidden" id="editingJobId" value="">
+            <div>
+                <label for="modal-time" class="block text-gray-700 text-sm font-medium mb-1">投递时间</label>
+                <input type="date" id="modal-time"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 text-sm">
             </div>
+            <div>
+                <label for="modal-company" class="block text-gray-700 text-sm font-medium mb-1">公司</label>
+                <input type="text" id="modal-company" placeholder="公司名称"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 text-sm" required>
+            </div>
+            <div>
+                <label for="modal-position" class="block text-gray-700 text-sm font-medium mb-1">岗位</label>
+                <input type="text" id="modal-position" placeholder="岗位名称"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 text-sm" required>
+            </div>
+            <!-- New: Job Link for parsed URLs -->
+            <div>
+                <label for="modal-job-link" class="block text-gray-700 text-sm font-medium mb-1">岗位链接</label>
+                <input type="url" id="modal-job-link" placeholder="例如：https://careers.google.com/jobs/results/12345/"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 text-sm">
+            </div>
+            <div>
+                <label for="modal-keywords" class="block text-gray-700 text-sm font-medium mb-1">关键词</label>
+                <input type="text" id="modal-keywords" placeholder="例如：前端, Vue, React"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 text-sm">
+            </div>
+            <div>
+                <label for="modal-industry" class="block text-gray-700 text-sm font-medium mb-1">行业</label>
+                <input type="text" id="modal-industry" placeholder="例如：互联网, 金融"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 text-sm">
+            </div>
+            <div>
+                <label for="modal-status" class="block text-gray-700 text-sm font-medium mb-1">状态</label>
+                <select id="modal-status"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 text-sm">
+                    <option value="投递">投递</option>
+                    <option value="测评">测评</option>
+                    <option value="笔试">笔试</option>
+                    <option value="一面">一面</option>
+                    <option value="二面">二面</option>
+                    <option value="终面">终面</option>
+                    <option value="HR面">HR面</option>
+                    <option value="OC">OC</option>
+                    <option value="拒绝">拒绝</option>
+                </select>
+            </div>
+            <div>
+                <label for="modal-location" class="block text-gray-700 text-sm font-medium mb-1">地点</label>
+                <input type="text" id="modal-location" placeholder="例如：上海, 远程"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 text-sm">
+            </div>
+            <div>
+                <label for="modal-notes" class="block text-gray-700 text-sm font-medium mb-1">备注</label>
+                <textarea id="modal-notes" placeholder="其他重要信息"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent h-16 md:h-20 resize-y text-gray-700 text-sm"></textarea>
+            </div>
+            <div>
+                <label for="modal-level" class="block text-gray-700 text-sm font-medium mb-1">等级分类</label>
+                <select id="modal-level"
+                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 text-sm">
+                    <option value="低">低</option>
+                    <option value="中">中</option>
+                    <option value="高">高</option>
+                </select>
+            </div>
+
+            <div class="flex justify-end space-x-3 md:space-x-4 mt-4 md:mt-6">
+                <button type="button" id="cancel-modal-btn"
+                    class="bg-gray-200 text-gray-700 py-2 px-3 md:px-4 rounded-lg font-semibold hover:bg-gray-300 transition duration-200 text-sm">
+                    取消
+                </button>
+                <button type="submit" id="save-job-btn"
+                    class="bg-blue-600 text-white py-2 px-3 md:px-4 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 text-sm">
+                    保存
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Custom Message Box Modal - Replaces alert/confirm -->
+<div id="messageBoxModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-4 md:p-6 rounded-xl shadow-2xl w-11/12 max-w-sm mx-auto modal-content transform transition-all modal-enter">
+        <h3 class="text-xl md:text-xl font-bold text-gray-900 mb-3 md:mb-4" id="messageBoxTitle"></h3>
+        <p class="text-gray-700 mb-4 md:mb-6 text-sm" id="messageBoxContent"></p>
+        <div class="flex justify-end gap-2 md:gap-3">
+            <button id="messageBoxCancelBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-3 rounded-lg shadow-md transition-colors duration-200 text-sm hidden">取消</button>
+            <button id="messageBoxConfirmBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg shadow-md transition-colors duration-200 text-sm">确定</button>
         </div>
     </div>
+</div>
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+<!-- Firebase SDKs -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    
+    // --- Global Firebase and App State Variables ---
+    let db;
+    let auth;
+    let userId = '';
+    let isAuthReady = false;
+    let jobRecords = [];
+    let currentChartPeriod = 'weekly';
+    let selectedYear = new Date().getFullYear().toString();
+    let selectedMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
+    let currentSortColumn = 'time';
+    let currentSortOrder = 'desc';
+    let currentEditingJobId = null;
 
-        // --- Global Firebase and App State Variables ---
-        let db;
-        let auth;
-        let userId = '';
-        let isAuthReady = false;
-        let jobRecords = []; // Renamed from 'jobs' to 'jobRecords' for consistency with user's original file
-        let currentChartPeriod = 'weekly';
-        let selectedYear = new Date().getFullYear().toString(); // Default current year
-        let selectedMonth = (new Date().getMonth() + 1).toString().padStart(2, '0'); // Default current month
-        let currentSortColumn = 'time';
-        let currentSortOrder = 'desc';
-        let currentEditingJobId = null;
+    // Provide robust default values for Canvas environment variables
+    // If you are running this locally without Canvas, you need to replace
+    // "YOUR_FIREBASE_API_KEY", "YOUR_PROJECT_ID", etc., with your actual Firebase project credentials.
+    const defaultFirebaseConfig = {
+        apiKey: "YOUR_FIREBASE_API_KEY", // Replace with your actual Firebase API Key
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
 
-        // Provide robust default values for Canvas environment variables
-        // If you are running this locally without Canvas, you need to replace
-        // "YOUR_FIREBASE_API_KEY", "YOUR_PROJECT_ID", etc., with your actual Firebase project credentials.
-        const defaultFirebaseConfig = {
-            apiKey: "YOUR_FIREBASE_API_KEY", // Replace with your actual Firebase API Key
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+    // Safely access Canvas-provided global variables or fall back to defaults
+    const firebaseConfig = (typeof __firebase_config !== 'undefined' && __firebase_config && Object.keys(JSON.parse(__firebase_config)).length > 0)
+        ? JSON.parse(__firebase_config)
+        : defaultFirebaseConfig;
 
-        // Safely access Canvas-provided global variables or fall back to defaults
-        const firebaseConfig = (typeof __firebase_config !== 'undefined' && __firebase_config && Object.keys(JSON.parse(__firebase_config)).length > 0)
-            ? JSON.parse(__firebase_config)
-            : defaultFirebaseConfig;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId || 'default-app-id';
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId || 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    /**
+     * Initializes Firebase services (Auth, Firestore) and sets up authentication listener.
+     */
+    async function initializeFirebase() {
+        try {
+            // Warn if Firebase config is missing or placeholder
+            if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
+                console.warn("Firebase configuration is missing or placeholder. Running without full Firebase functionality (demo mode).");
+                // Set a dummy userId and indicate auth is ready for local demo without real DB
+                userId = crypto.randomUUID();
+                document.getElementById('displayUserId').textContent = userId;
+                document.getElementById('headerUserId').textContent = userId;
+                isAuthReady = true;
 
-        /**
-         * Initializes Firebase services (Auth, Firestore) and sets up authentication listener.
-         */
-        async function initializeFirebase() {
-            try {
-                // Warn if Firebase config is missing or placeholder
-                if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
-                    console.warn("Firebase configuration is missing or placeholder. Running without full Firebase functionality (demo mode).");
-                    // Set a dummy userId and indicate auth is ready for local demo without real DB
-                    userId = crypto.randomUUID();
-                    document.getElementById('displayUserId').textContent = userId;
-                    document.getElementById('headerUserId').textContent = userId;
-                    isAuthReady = true;
-
-                    // For demo mode, load dummy jobs from localStorage or create them
-                    try {
-                        const storedRecords = localStorage.getItem('jobTrackRecords');
-                        if (storedRecords) {
-                            jobRecords = JSON.parse(storedRecords);
-                            jobRecords.forEach(record => {
-                                // Ensure 'time' is a Date object, even if stored as string
-                                if (typeof record.time === 'string') {
-                                    record.time = new Date(record.time);
-                                }
-                            });
-                        } else {
-                            // Create some dummy data if nothing in localStorage
-                            jobRecords = [
-                                { id: 'demo1', time: new Date('2024-05-20'), company: '模拟公司A', position: '前端工程师', keywords: 'Vue, React', industry: '互联网', status: '投递', location: '上海', notes: '投递链接：https://example.com/jobA', level: '中', jobLink: 'https://example.com/jobA' },
-                                { id: 'demo2', time: new Date('2024-05-25'), company: '模拟科技B', position: '产品经理', keywords: 'B端, 用户体验', industry: 'SaaS', status: '一面', location: '北京', notes: '已约一面', level: '高', jobLink: '' },
-                                { id: 'demo3', time: new Date('2024-06-01'), company: '模拟数据C', position: '数据分析师', keywords: 'Python, SQL', industry: '金融', status: 'OC', location: '深圳', notes: '已收到Offer', level: '高', jobLink: '' },
-                                { id: 'demo4', time: new Date('2024-06-05'), company: '模拟游戏D', position: '游戏策划', keywords: '系统设计', industry: '游戏', status: '拒绝', location: '广州', notes: '不合适', level: '低', jobLink: '' },
-                                { id: 'demo5', time: new Date('2024-06-08'), company: '模拟公司A', position: '后端开发', keywords: 'Java, Spring', industry: '互联网', status: '投递', location: '上海', notes: '', level: '中', jobLink: '' }
-                            ];
-                            saveJobRecords(); // Save dummy data to localStorage
-                        }
-                    } catch (e) {
-                        console.error("Failed to load/create demo records:", e);
-                        jobRecords = []; // Reset if there's an issue with demo data
-                    }
-
-                    updateOverviewStats();
-                    renderJobTable();
-                    renderSubmissionsChart(); // Render chart with demo data
-                    return; // Exit if Firebase is not properly configured
-                }
-
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                // Listen for auth state changes
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                    } else {
-                        // Sign in anonymously if no user is logged in or if using custom token
-                        try {
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } else {
-                                await signInAnonymously(auth);
+                // For demo mode, load dummy jobs from localStorage or create them
+                try {
+                    const storedRecords = localStorage.getItem('jobTrackRecords');
+                    if (storedRecords) {
+                        jobRecords = JSON.parse(storedRecords);
+                        jobRecords.forEach(record => {
+                            // Ensure 'time' is a Date object, even if stored as string
+                            if (typeof record.time === 'string') {
+                                record.time = new Date(record.time);
                             }
-                            userId = auth.currentUser?.uid || crypto.randomUUID();
-                        } catch (error) {
-                            console.error("Error signing in:", error);
-                            displayMessageBox("认证错误", `登录失败: ${error.message}。将使用临时ID。`);
-                            userId = crypto.randomUUID(); // Fallback to random ID if sign-in fails
+                        });
+                    } else {
+                        // Create some dummy data if nothing in localStorage
+                        jobRecords = [
+                            { id: 'demo1', time: new Date('2024-05-20'), company: '模拟公司A', position: '前端工程师', keywords: 'Vue, React', industry: '互联网', status: '投递', location: '上海', notes: '投递链接：https://example.com/jobA', level: '中', jobLink: 'https://example.com/jobA' },
+                            { id: 'demo2', time: new Date('2024-05-25'), company: '模拟科技B', position: '产品经理', keywords: 'B端, 用户体验', industry: 'SaaS', status: '一面', location: '北京', notes: '已约一面', level: '高', jobLink: '' },
+                            { id: 'demo3', time: new Date('2024-06-01'), company: '模拟数据C', position: '数据分析师', keywords: 'Python, SQL', industry: '金融', status: 'OC', location: '深圳', notes: '已收到Offer', level: '高', jobLink: '' },
+                            { id: 'demo4', time: new Date('2024-06-05'), company: '模拟游戏D', position: '游戏策划', keywords: '系统设计', industry: '游戏', status: '拒绝', location: '广州', notes: '不合适', level: '低', jobLink: '' },
+                            { id: 'demo5', time: new Date('2024-06-08'), company: '模拟公司A', position: '后端开发', keywords: 'Java, Spring', industry: '互联网', status: '投递', location: '上海', notes: '', level: '中', jobLink: '' }
+                        ];
+                        saveJobRecords(); // Save dummy data to localStorage
+                    }
+                } catch (e) {
+                    console.error("Failed to load/create demo records:", e);
+                    jobRecords = []; // Reset if there's an issue with demo data
+                }
+
+                updateOverviewStats();
+                renderJobTable();
+                renderSubmissionsChart(); // Render chart with demo data
+                return; // Exit if Firebase is not properly configured
+            }
+
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // Listen for auth state changes
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                } else {
+                    // Sign in anonymously if no user is logged in or if using custom token
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
                         }
+                        userId = auth.currentUser?.uid || crypto.randomUUID();
+                    } catch (error) {
+                        console.error("Error signing in:", error);
+                        displayMessageBox("认证错误", `登录失败: ${error.message}。将使用临时ID。`);
+                        userId = crypto.randomUUID(); // Fallback to random ID if sign-in fails
                     }
-                    document.getElementById('displayUserId').textContent = userId;
-                    document.getElementById('headerUserId').textContent = userId;
-                    isAuthReady = true; // Auth state is now ready
-                    if (db && userId && isAuthReady) {
-                        setupJobListener(); // Start listening for job data once auth is ready
-                    }
-                });
-            } catch (error) {
-                console.error("Error initializing Firebase:", error);
-                displayMessageBox("初始化错误", `Firebase 初始化失败: ${error.message}。部分功能可能受限。`);
-                isAuthReady = true; // Still set to true even if failed, to allow UI to proceed (without DB interaction)
-            }
-        }
-
-        /**
-         * Sets up a real-time listener for job data from Firestore.
-         */
-        function setupJobListener() {
-            // Only attempt to fetch from Firestore if db and userId are properly set AND auth is ready.
-            if (!db || !userId || !isAuthReady) {
-                console.warn("Firestore 或用户 ID 未准备好。无法设置岗位监听器。");
-                return;
-            }
-
-            // Skip Firestore if Firebase config is placeholder (handled in initializeFirebase)
-            if (firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
-                console.warn("Firebase API Key is a placeholder. Skipping Firestore data fetching.");
-                return;
-            }
-
-            const jobsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/jobRecords`); // Collection name changed
-            onSnapshot(jobsCollectionRef, (snapshot) => {
-                jobRecords = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    // Convert Firestore Timestamp to Date object if 'time' exists and is a Timestamp
-                    if (data.time && data.time.toDate) {
-                        data.time = data.time.toDate();
-                    } else if (typeof data.time === 'string') {
-                        // Ensure string dates are also converted to Date objects
-                        data.time = new Date(data.time);
-                    }
-                    return { id: doc.id, ...data };
-                });
-                updateOverviewStats(); // Update counts
-                renderJobTable();     // Re-render job list on data change
-                renderSubmissionsChart(); // Re-render chart with new data
-            }, (error) => {
-                console.error("Error fetching jobs:", error);
-                displayMessageBox("数据加载错误", `从数据库加载数据失败: ${error.message}`);
-            });
-        }
-
-        // --- DOM element references (moved here for module scope) ---
-        const menuToggle = document.getElementById('menu-toggle');
-        const mainNav = document.getElementById('main-nav');
-        const userIdSpan = document.getElementById('displayUserId'); // Corrected ID
-        const headerUserIdSpan = document.getElementById('headerUserId'); // Corrected ID
-        // Removed appliedCountSpan as per user request
-        const interviewCountSpan = document.getElementById('interview-count');
-        const offerCountSpan = document.getElementById('offer-count');
-        const parseJobInput = document.getElementById('jobParsingInput'); // Corrected ID
-        const parseJobBtn = document.getElementById('parseAndAddBtn'); // Corrected ID
-        const toggleWeeklyBtn = document.getElementById('toggle-weekly');
-        const toggleMonthlyBtn = document.getElementById('toggle-monthly');
-        const monthlySelectorsDiv = document.getElementById('monthly-selectors');
-        const yearSelect = document.getElementById('year-select');
-        const monthSelect = document.getElementById('month-select');
-        const submissionsChartSvg = d3.select("#submissions-chart");
-        const noChartDataMessage = document.getElementById('no-chart-data-message');
-        const jobEntriesTbody = document.getElementById('job-entries-tbody');
-        const noRecordsMessage = document.getElementById('no-records-message');
-        const addNewJobBtn = document.getElementById('add-new-job-btn'); // Corrected ID
-
-        // Filter & Sort elements
-        const globalSearchInput = document.getElementById('global-search-input');
-        const filterStatusSelect = document.getElementById('filter-status');
-        const filterStartDateInput = document.getElementById('filter-start-date');
-        const filterEndDateInput = document.getElementById('filter-end-date');
-        const resetFiltersBtn = document.getElementById('reset-filters');
-        const tableHeaders = document.querySelectorAll('th[data-sort-key]'); // Clickable table headers for sorting
-
-        // Modal elements
-        const jobModal = document.getElementById('job-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const jobForm = document.getElementById('job-form');
-        const editingJobIdInput = document.getElementById('editingJobId'); // New: hidden input for editing ID
-        const modalTimeInput = document.getElementById('modal-time');
-        const modalCompanyInput = document.getElementById('modal-company');
-        const modalPositionInput = document.getElementById('modal-position');
-        const modalJobLinkInput = document.getElementById('modal-job-link'); // New: Job Link input
-        const modalKeywordsInput = document.getElementById('modal-keywords');
-        const modalIndustryInput = document.getElementById('modal-industry');
-        const modalStatusSelect = document.getElementById('modal-status');
-        const modalLocationInput = document.getElementById('modal-location');
-        const modalNotesInput = document.getElementById('modal-notes');
-        const modalLevelSelect = document.getElementById('modal-level');
-        const cancelModalBtn = document.getElementById('cancel-modal-btn');
-        const saveJobBtn = document.getElementById('save-job-btn');
-
-
-        // --- Initialization on DOMContentLoaded ---
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeFirebase(); // Initialize Firebase first
-
-            populateYearMonthSelectors(); // Populate year/month dropdowns
-
-            // Initialize date inputs
-            const today = new Date();
-            modalTimeInput.value = formatDate(today); // Default today for modal
-            const oneMonthAgo = new Date(today);
-            oneMonthAgo.setMonth(today.getMonth() - 1);
-            filterStartDateInput.value = formatDate(oneMonthAgo); // Default filter start date
-            filterEndDateInput.value = formatDate(today); // Default filter end date
-
-            updateSortIcons(); // Set initial sort icons
-
-            // Add event listener to close modal when clicking outside of it
-            jobModal.addEventListener('click', (event) => {
-                // Check if the click occurred directly on the modal backdrop, not inside the modal content
-                if (event.target === jobModal) {
-                    hideModal();
+                }
+                document.getElementById('displayUserId').textContent = userId;
+                document.getElementById('headerUserId').textContent = userId;
+                isAuthReady = true; // Auth state is now ready
+                if (db && userId && isAuthReady) {
+                    setupJobListener(); // Start listening for job data once auth is ready
                 }
             });
+        } catch (error) {
+            console.error("Error initializing Firebase:", error);
+            displayMessageBox("初始化错误", `Firebase 初始化失败: ${error.message}。部分功能可能受限。`);
+            isAuthReady = true; // Still set to true even if failed, to allow UI to proceed (without DB interaction)
+        }
+    }
+
+    /**
+     * Sets up a real-time listener for job data from Firestore.
+     */
+    function setupJobListener() {
+        // Only attempt to fetch from Firestore if db and userId are properly set AND auth is ready.
+        if (!db || !userId || !isAuthReady) {
+            console.warn("Firestore 或用户 ID 未准备好。无法设置岗位监听器。");
+            return;
+        }
+
+        // Skip Firestore if Firebase config is placeholder (handled in initializeFirebase)
+        if (firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
+             console.warn("Firebase API Key is a placeholder. Skipping Firestore data fetching.");
+             return;
+        }
+
+        const jobsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/jobRecords`); // Collection name changed
+        onSnapshot(jobsCollectionRef, (snapshot) => {
+            jobRecords = snapshot.docs.map(doc => {
+                const data = doc.data();
+                // Convert Firestore Timestamp to Date object if 'time' exists and is a Timestamp
+                if (data.time && data.time.toDate) {
+                    data.time = data.time.toDate();
+                } else if (typeof data.time === 'string') {
+                    // Ensure string dates are also converted to Date objects
+                    data.time = new Date(data.time);
+                }
+                return { id: doc.id, ...data };
+            });
+            updateOverviewStats(); // Update counts
+            renderJobTable();     // Re-render job list on data change
+            renderSubmissionsChart(); // Re-render chart with new data
+        }, (error) => {
+            console.error("Error fetching jobs:", error);
+            displayMessageBox("数据加载错误", `从数据库加载数据失败: ${error.message}`);
+        });
+    }
+
+    // --- DOM element references (moved here for module scope) ---
+    const menuToggle = document.getElementById('menu-toggle');
+    const mainSidebar = document.getElementById('main-sidebar');
+    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+    const userIdSpan = document.getElementById('displayUserId');
+    const headerUserIdSpan = document.getElementById('headerUserId');
+    const interviewCountSpan = document.getElementById('interview-count');
+    const offerCountSpan = document.getElementById('offer-count');
+    const parseJobInput = document.getElementById('jobParsingInput');
+    const parseJobBtn = document.getElementById('parseAndAddBtn');
+    const toggleWeeklyBtn = document.getElementById('toggle-weekly');
+    const toggleMonthlyBtn = document.getElementById('toggle-monthly');
+    const monthlySelectorsDiv = document.getElementById('monthly-selectors');
+    const yearSelect = document.getElementById('year-select');
+    const monthSelect = document.getElementById('month-select');
+    const submissionsChartSvg = d3.select("#submissions-chart");
+    const noChartDataMessage = document.getElementById('no-chart-data-message');
+    const jobEntriesTbody = document.getElementById('job-entries-tbody');
+    const noRecordsMessage = document.getElementById('no-records-message');
+    const addNewJobBtn = document.getElementById('add-new-job-btn');
+
+    // Filter & Sort elements
+    const globalSearchInput = document.getElementById('global-search-input');
+    const filterStatusSelect = document.getElementById('filter-status');
+    const filterStartDateInput = document.getElementById('filter-start-date');
+    const filterEndDateInput = document.getElementById('filter-end-date');
+    const resetFiltersBtn = document.getElementById('reset-filters');
+    const tableHeaders = document.querySelectorAll('th[data-sort-key]'); // Clickable table headers for sorting
+
+    // Modal elements
+    const jobModal = document.getElementById('job-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const jobForm = document.getElementById('job-form');
+    const editingJobIdInput = document.getElementById('editingJobId');
+    const modalTimeInput = document.getElementById('modal-time');
+    const modalCompanyInput = document.getElementById('modal-company');
+    const modalPositionInput = document.getElementById('modal-position');
+    const modalJobLinkInput = document.getElementById('modal-job-link');
+    const modalKeywordsInput = document.getElementById('modal-keywords');
+    const modalIndustryInput = document.getElementById('modal-industry');
+    const modalStatusSelect = document.getElementById('modal-status');
+    const modalLocationInput = document.getElementById('modal-location');
+    const modalNotesInput = document.getElementById('modal-notes');
+    const modalLevelSelect = document.getElementById('modal-level');
+    const cancelModalBtn = document.getElementById('cancel-modal-btn');
+    const saveJobBtn = document.getElementById('save-job-btn');
+
+
+    // --- Initialization on DOMContentLoaded ---
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeFirebase(); // Initialize Firebase first
+
+        populateYearMonthSelectors(); // Populate year/month dropdowns
+
+        // Initialize date inputs
+        const today = new Date();
+        modalTimeInput.value = formatDate(today); // Default today for modal
+        const oneMonthAgo = new Date(today);
+        oneMonthAgo.setMonth(today.getMonth() - 1);
+        filterStartDateInput.value = formatDate(oneMonthAgo); // Default filter start date
+        filterEndDateInput.value = formatDate(today); // Default filter end date
+
+        updateSortIcons(); // Set initial sort icons
+
+        // Add event listener to close modal when clicking outside of it
+        jobModal.addEventListener('click', (event) => {
+            // Check if the click occurred directly on the modal backdrop, not inside the modal content
+            if (event.target === jobModal) {
+                hideModal();
+            }
         });
 
-        // --- Helper Functions ---
+        // Re-render chart on window resize
+        window.addEventListener('resize', () => {
+            renderSubmissionsChart();
+        });
 
-        /**
-         * Formats a Date object to INSEE-MM-DD string.
-         * @param {Date} date The date object to format.
-         * @returns {string} Formatted date string.
-         */
-        function formatDate(date) {
-            const d = new Date(date);
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+        // Initial check for sidebar visibility on load (for mobile vs desktop)
+        if (window.innerWidth >= 768) { // md breakpoint
+            mainSidebar.classList.remove('hidden');
         }
+    });
 
-        /**
-         * Saves job records to localStorage (only used in demo mode now).
-         */
-        function saveJobRecords() {
-            try {
-                // Convert Date objects to INSEE-MM-DD strings for storage
-                const recordsToStore = jobRecords.map(record => ({
-                    ...record,
-                    time: record.time ? record.time.toISOString().slice(0, 10) : ''
-                }));
-                localStorage.setItem('jobTrackRecords', JSON.stringify(recordsToStore));
-            } catch (e) {
-                console.error("Failed to save records to localStorage:", e);
-            }
+    // --- Helper Functions ---
+
+    /**
+     * Formats a Date object to YYYY-MM-DD string.
+     * @param {Date} date The date object to format.
+     * @returns {string} Formatted date string.
+     */
+    function formatDate(date) {
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Saves job records to localStorage (only used in demo mode now).
+     */
+    function saveJobRecords() {
+        try {
+            // Convert Date objects to YYYY-MM-DD strings for storage
+            const recordsToStore = jobRecords.map(record => ({
+                ...record,
+                time: record.time ? record.time.toISOString().slice(0, 10) : ''
+            }));
+            localStorage.setItem('jobTrackRecords', JSON.stringify(recordsToStore));
+        } catch (e) {
+            console.error("Failed to save records to localStorage:", e);
         }
+    }
 
-        /**
-         * Updates the interview and offer counts in the overview section.
-         * Reverted to original logic, no 'applied' count.
-         */
-        function updateOverviewStats() {
-            // Interviews include: 测评, 笔试, 一面, 二面, 终面, HR面
-            const interviews = jobRecords.filter(job =>
-                ['测评', '笔试', '一面', '二面', '终面', 'HR面'].includes(job.status)
-            ).length;
-            // Offers only include: OC
-            const offers = jobRecords.filter(job => job.status === 'OC').length;
+    /**
+     * Updates the interview and offer counts in the overview section.
+     * Reverted to original logic, no 'applied' count.
+     */
+    function updateOverviewStats() {
+        // Interviews include: 测评, 笔试, 一面, 二面, 终面, HR面
+        const interviews = jobRecords.filter(job =>
+            ['测评', '笔试', '一面', '二面', '终面', 'HR面'].includes(job.status)
+        ).length;
+        // Offers only include: OC
+        const offers = jobRecords.filter(job => job.status === 'OC').length;
 
-            interviewCountSpan.textContent = interviews;
-            offerCountSpan.textContent = offers;
+        interviewCountSpan.textContent = interviews;
+        offerCountSpan.textContent = offers;
+    }
+
+    /**
+     * Renders the job records table based on current filters and sort order.
+     */
+    function renderJobTable() {
+        const tbody = jobEntriesTbody;
+        tbody.innerHTML = ''; // Clear existing content
+
+        let displayedRecords = [...jobRecords]; // Work on a copy
+
+        // --- Apply Filters ---
+        const globalSearchQuery = globalSearchInput.value.toLowerCase();
+        const statusFilter = filterStatusSelect.value;
+        const startDate = filterStartDateInput.value ? new Date(filterStartDateInput.value) : null;
+        const endDate = filterEndDateInput.value ? new Date(filterEndDateInput.value) : null;
+
+        if (globalSearchQuery) {
+            displayedRecords = displayedRecords.filter(job =>
+                (job.company && job.company.toLowerCase().includes(globalSearchQuery)) ||
+                (job.position && job.position.toLowerCase().includes(globalSearchQuery)) ||
+                (job.keywords && job.keywords.toLowerCase().includes(globalSearchQuery)) ||
+                (job.industry && job.industry.toLowerCase().includes(globalSearchQuery)) ||
+                (job.location && job.location.toLowerCase().includes(globalSearchQuery)) ||
+                (job.notes && job.notes.toLowerCase().includes(globalSearchQuery)) ||
+                (job.jobLink && job.jobLink.toLowerCase().includes(globalSearchQuery)) // Search job link too
+            );
         }
+        if (statusFilter) {
+            displayedRecords = displayedRecords.filter(job => job.status === statusFilter);
+        }
+        if (startDate || endDate) {
+            displayedRecords = displayedRecords.filter(job => {
+                const jobTime = job.time ? new Date(job.time) : null;
+                if (!jobTime || isNaN(jobTime)) return false; // Skip if jobTime is invalid
 
-        /**
-         * Renders the job records table based on current filters and sort order.
-         */
-        function renderJobTable() {
-            const tbody = jobEntriesTbody;
-            tbody.innerHTML = ''; // Clear existing content
+                jobTime.setHours(0, 0, 0, 0); // Clear time for date-only comparison
+                const start = startDate ? new Date(startDate) : null;
+                const end = endDate ? new Date(endDate) : null;
+                if (start) start.setHours(0, 0, 0, 0);
+                if (end) end.setHours(23, 59, 59, 999); // End date includes the whole day
 
-            let displayedRecords = [...jobRecords]; // Work on a copy
-
-            // --- Apply Filters ---
-            const globalSearchQuery = globalSearchInput.value.toLowerCase();
-            const statusFilter = filterStatusSelect.value;
-            const startDate = filterStartDateInput.value ? new Date(filterStartDateInput.value) : null;
-            const endDate = filterEndDateInput.value ? new Date(filterEndDateInput.value) : null;
-
-            if (globalSearchQuery) {
-                displayedRecords = displayedRecords.filter(job =>
-                    (job.company && job.company.toLowerCase().includes(globalSearchQuery)) ||
-                    (job.position && job.position.toLowerCase().includes(globalSearchQuery)) ||
-                    (job.keywords && job.keywords.toLowerCase().includes(globalSearchQuery)) ||
-                    (job.industry && job.industry.toLowerCase().includes(globalSearchQuery)) ||
-                    (job.location && job.location.toLowerCase().includes(globalSearchQuery)) ||
-                    (job.notes && job.notes.toLowerCase().includes(globalSearchQuery)) ||
-                    (job.jobLink && job.jobLink.toLowerCase().includes(globalSearchQuery)) // Search job link too
-                );
-            }
-            if (statusFilter) {
-                displayedRecords = displayedRecords.filter(job => job.status === statusFilter);
-            }
-            if (startDate || endDate) {
-                displayedRecords = displayedRecords.filter(job => {
-                    const jobTime = job.time ? new Date(job.time) : null;
-                    if (!jobTime || isNaN(jobTime)) return false; // Skip if jobTime is invalid
-
-                    jobTime.setHours(0, 0, 0, 0); // Clear time for date-only comparison
-                    const start = startDate ? new Date(startDate) : null;
-                    const end = endDate ? new Date(endDate) : null;
-                    if (start) start.setHours(0, 0, 0, 0);
-                    if (end) end.setHours(23, 59, 59, 999); // End date includes the whole day
-
-                    return (!start || jobTime >= start) && (!end || jobTime <= end);
-                });
-            }
-
-            // --- Apply Sorting ---
-            displayedRecords.sort((a, b) => {
-                let valA, valB;
-                switch (currentSortColumn) {
-                    case 'time':
-                        valA = a.time ? a.time.getTime() : 0; // Handle potential null/invalid dates
-                        valB = b.time ? b.time.getTime() : 0;
-                        break;
-                    case 'company':
-                    case 'position':
-                    case 'status':
-                        valA = (a[currentSortColumn] || '').toLowerCase();
-                        valB = (b[currentSortColumn] || '').toLowerCase();
-                        break;
-                    case 'level':
-                        const levelMap = { '低': 1, '中': 2, '高': 3 }; // Map levels to numbers for sorting
-                        valA = levelMap[a.level] || 0;
-                        valB = levelMap[b.level] || 0;
-                        break;
-                    default:
-                        valA = a.time ? a.time.getTime() : 0;
-                        valB = b.time ? b.time.getTime() : 0;
-                }
-
-                if (typeof valA === 'string' && typeof valB === 'string') {
-                    return currentSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(A);
-                }
-                return currentSortOrder === 'asc' ? (valA - valB) : (valB - valA);
+                return (!start || jobTime >= start) && (!end || jobTime <= end);
             });
+        }
 
-            // --- Render Table Rows ---
-            if (displayedRecords.length === 0) {
-                noRecordsMessage.classList.remove('hidden');
-                tbody.classList.add('hidden');
-            } else {
-                noRecordsMessage.classList.add('hidden');
-                tbody.classList.remove('hidden');
-                displayedRecords.forEach(job => {
-                    const row = tbody.insertRow();
-                    row.classList.add('hover-row', 'transition-all', 'duration-150');
+        // --- Apply Sorting ---
+        displayedRecords.sort((a, b) => {
+            let valA, valB;
+            switch (currentSortColumn) {
+                case 'time':
+                    valA = a.time ? a.time.getTime() : 0; // Handle potential null/invalid dates
+                    valB = b.time ? b.time.getTime() : 0;
+                    break;
+                case 'company':
+                case 'position':
+                case 'status':
+                    valA = (a[currentSortColumn] || '').toLowerCase();
+                    valB = (b[currentSortColumn] || '').toLowerCase();
+                    break;
+                case 'level':
+                    const levelMap = { '低': 1, '中': 2, '高': 3 }; // Map levels to numbers for sorting
+                    valA = levelMap[a.level] || 0;
+                    valB = levelMap[b.level] || 0;
+                    break;
+                default:
+                    valA = a.time ? a.time.getTime() : 0;
+                    valB = b.time ? b.time.getTime() : 0;
+            }
 
-                    // If jobLink exists, make the position a clickable link
-                    const positionContent = job.jobLink ?
-                        `<a href="${job.jobLink}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${job.position}</a>` :
-                        job.position;
+            if (typeof valA === 'string' && typeof valB === 'string') {
+                return currentSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+            return currentSortOrder === 'asc' ? (valA - valB) : (valB - valA);
+        });
 
-                    row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${job.time ? formatDate(job.time) : ''}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${job.company || ''}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${positionContent || ''}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${job.keywords || ''}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${job.industry || ''}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+        // --- Render Table Rows ---
+        if (displayedRecords.length === 0) {
+            noRecordsMessage.classList.remove('hidden');
+            tbody.classList.add('hidden');
+        } else {
+            noRecordsMessage.classList.add('hidden');
+            tbody.classList.remove('hidden');
+            displayedRecords.forEach(job => {
+                const row = tbody.insertRow();
+                row.classList.add('hover-row', 'transition-all', 'duration-150');
+
+                // If jobLink exists, make the position a clickable link
+                const positionContent = job.jobLink ?
+                    `<a href="${job.jobLink}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${job.position}</a>` :
+                    job.position;
+
+                row.innerHTML = `
+                    <td class="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap text-sm font-medium text-gray-900">${job.time ? formatDate(job.time) : ''}</td>
+                    <td class="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-700">${job.company || ''}</td>
+                    <td class="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-700">${positionContent || ''}</td>
+                    <td class="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-700">${job.keywords || ''}</td>
+                    <td class="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-700">${job.industry || ''}</td>
+                    <td class="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap text-sm">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(job.status)}">
                             ${job.status || '未知'}
                         </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${job.location || ''}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-pre-wrap">${job.notes || '无'}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    <td class="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-700">${job.location || ''}</td>
+                    <td class="px-4 py-2 md:px-6 md:py-4 text-sm text-gray-700 whitespace-pre-wrap">${job.notes || '无'}</td>
+                    <td class="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-700">
                         <span class="${getLevelBadgeClass(job.level)}">${job.level || '未知'}</span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button data-id="${job.id}" class="edit-btn text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-edit"></i></button>
+                    <td class="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button data-id="${job.id}" class="edit-btn text-blue-600 hover:text-blue-900 mr-2 md:mr-3"><i class="fas fa-edit"></i></button>
                         <button data-id="${job.id}" class="delete-btn text-red-600 hover:text-red-900"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 `;
-                });
-                addJobTableEventListeners(); // Attach event listeners to new buttons
-            }
-            updateSortIcons(); // Update sort indicators on table headers
+            });
+            addJobTableEventListeners(); // Attach event listeners to new buttons
         }
+        updateSortIcons(); // Update sort indicators on table headers
+    }
 
-        /**
-         * Returns Tailwind CSS classes for status badges.
-         * @param {string} status The job status.
-         * @returns {string} Tailwind CSS classes.
-         */
-        function getStatusBadgeClass(status) {
-            switch (status) {
-                case '投递': return 'bg-blue-100 text-blue-800';
-                case '测评': return 'bg-purple-100 text-purple-800';
-                case '笔试': return 'bg-cyan-100 text-cyan-800';
-                case '一面': return 'bg-yellow-100 text-yellow-800';
-                case '二面': return 'bg-orange-100 text-orange-800';
-                case '终面': return 'bg-red-100 text-red-800';
-                case 'HR面': return 'bg-pink-100 text-pink-800';
-                case 'OC': return 'bg-green-100 text-green-800';
-                case '拒绝': return 'bg-gray-400 text-gray-800';
-                default: return 'bg-gray-100 text-gray-800';
-            }
+    /**
+     * Returns Tailwind CSS classes for status badges.
+     * @param {string} status The job status.
+     * @returns {string} Tailwind CSS classes.
+     */
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case '投递': return 'bg-blue-100 text-blue-800';
+            case '测评': return 'bg-purple-100 text-purple-800';
+            case '笔试': return 'bg-cyan-100 text-cyan-800';
+            case '一面': return 'bg-yellow-100 text-yellow-800';
+            case '二面': return 'bg-orange-100 text-orange-800';
+            case '终面': return 'bg-red-100 text-red-800';
+            case 'HR面': return 'bg-pink-100 text-pink-800';
+            case 'OC': return 'bg-green-100 text-green-800';
+            case '拒绝': return 'bg-gray-400 text-gray-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
+    }
 
-        /**
-         * Returns Tailwind CSS classes for level badges.
-         * @param {string} level The job level.
-         * @returns {string} Tailwind CSS classes.
-         */
-        function getLevelBadgeClass(level) {
-            switch (level) {
-                case '低': return 'bg-gray-200 text-gray-800 px-2 py-1 rounded-md text-xs font-semibold';
-                case '中': return 'bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-semibold';
-                case '高': return 'bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-semibold';
-                default: return 'bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-xs font-semibold';
-            }
+    /**
+     * Returns Tailwind CSS classes for level badges.
+     * @param {string} level The job level.
+     * @returns {string} Tailwind CSS classes.
+     */
+    function getLevelBadgeClass(level) {
+        switch (level) {
+            case '低': return 'bg-gray-200 text-gray-800 px-2 py-1 rounded-md text-xs font-semibold';
+            case '中': return 'bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-semibold';
+            case '高': return 'bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-semibold';
+            default: return 'bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-xs font-semibold';
         }
+    }
 
-        /**
-         * Updates the sort icons on table headers to reflect current sort state.
-         */
-        function updateSortIcons() {
-            tableHeaders.forEach(header => {
-                const sortKey = header.dataset.sortKey;
-                const iconSpan = header.querySelector('.sort-icon');
-                if (iconSpan) {
-                    iconSpan.innerHTML = '';
-                    const icon = document.createElement('i');
-                    if (sortKey === currentSortColumn) {
-                        icon.classList.add('fas');
-                        if (currentSortOrder === 'asc') {
-                            icon.classList.add('fa-sort-up');
-                        } else {
-                            icon.classList.add('fa-sort-down');
-                        }
+    /**
+     * Updates the sort icons on table headers to reflect current sort state.
+     */
+    function updateSortIcons() {
+        tableHeaders.forEach(header => {
+            const sortKey = header.dataset.sortKey;
+            const iconSpan = header.querySelector('.sort-icon');
+            if (iconSpan) {
+                iconSpan.innerHTML = '';
+                const icon = document.createElement('i');
+                if (sortKey === currentSortColumn) {
+                    icon.classList.add('fas');
+                    if (currentSortOrder === 'asc') {
+                        icon.classList.add('fa-sort-up');
                     } else {
-                        icon.classList.add('fas', 'fa-sort');
+                        icon.classList.add('fa-sort-down');
                     }
-                    iconSpan.appendChild(icon);
+                } else {
+                    icon.classList.add('fas', 'fa-sort');
+                }
+                iconSpan.appendChild(icon);
+            }
+        });
+    }
+
+    /**
+     * Attaches event listeners to edit and delete buttons in the table.
+     */
+    function addJobTableEventListeners() {
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.onclick = (e) => openJobModalForEdit(e.currentTarget.dataset.id);
+        });
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.onclick = (e) => showCustomConfirm("确定要删除这条岗位记录吗？", () => confirmDeleteJob(e.currentTarget.dataset.id));
+        });
+    }
+
+    /**
+     * Renders the D3.js chart based on the selected period (weekly bar or monthly line).
+     */
+    function renderSubmissionsChart() {
+        const chartContainer = document.getElementById('submissions-chart-container');
+        const width = chartContainer.clientWidth;
+        const height = chartContainer.clientHeight;
+        const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+
+        submissionsChartSvg.selectAll("*").remove(); // Clear previous chart
+
+        if (width <= 0 || height <= 0) { // If container is not visible or has no size
+            console.warn("Chart container has zero or negative width/height. Chart might not render correctly.");
+            noChartDataMessage.classList.remove('hidden'); // Show message if chart can't render
+            return;
+        } else {
+            noChartDataMessage.classList.add('hidden');
+        }
+
+
+        const svg = submissionsChartSvg
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        let data = [];
+        let chartType = ''; // 'bar' or 'line'
+
+        if (currentChartPeriod === 'weekly') {
+            chartType = 'bar';
+            let chartDataMap = {};
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const dateStr = formatDate(d); // YYYY-MM-DD format
+                chartDataMap[dateStr] = 0;
+            }
+
+            jobRecords.forEach(job => {
+                const jobDate = job.time ? new Date(job.time) : null;
+                if (jobDate && !isNaN(jobDate.getTime())) {
+                    const key = formatDate(jobDate); // YYYY-MM-DD
+                    if (chartDataMap.hasOwnProperty(key)) {
+                        chartDataMap[key]++;
+                    }
                 }
             });
-        }
+            data = Object.keys(chartDataMap).map(key => ({
+                label: key.substring(5), // MM-DD for display
+                count: chartDataMap[key]
+            })).sort((a, b) => a.label.localeCompare(b.label));
 
-        /**
-         * Attaches event listeners to edit and delete buttons in the table.
-         */
-        function addJobTableEventListeners() {
-            document.querySelectorAll('.edit-btn').forEach(button => {
-                button.onclick = (e) => openJobModalForEdit(e.currentTarget.dataset.id);
+        } else { // monthly
+            chartType = 'line';
+            let chartDataMap = {};
+            // Determine days in selected month/year
+            const daysInMonth = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).getDate();
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayStr = i.toString().padStart(2, '0');
+                const dateKey = `${selectedYear}-${selectedMonth}-${dayStr}`;
+                chartDataMap[dateKey] = 0;
+            }
+
+            jobRecords.forEach(record => {
+                const recordDate = record.time ? new Date(record.time) : null;
+                if (recordDate && !isNaN(recordDate.getTime())) {
+                    const recordYear = recordDate.getFullYear().toString();
+                    const recordMonth = (recordDate.getMonth() + 1).toString().padStart(2, '0');
+                    const recordDay = recordDate.getDate().toString().padStart(2, '0');
+
+                    if (recordYear === selectedYear && recordMonth === selectedMonth) {
+                        const dateKey = `${recordYear}-${recordMonth}-${recordDay}`;
+                        if (chartDataMap.hasOwnProperty(dateKey)) {
+                            chartDataMap[dateKey]++;
+                        }
+                    }
+                }
             });
-            document.querySelectorAll('.delete-btn').forEach(button => {
-                button.onclick = (e) => showCustomConfirm("确定要删除这条岗位记录吗？", () => confirmDeleteJob(e.currentTarget.dataset.id));
-            });
-        }
+            data = Object.keys(chartDataMap).map(key => ({
+                label: key.slice(8), // Just the day part (e.g., "01", "15")
+                count: chartDataMap[key]
+            })).sort((a, b) => parseInt(a.label) - parseInt(b.label));
 
-        /**
-         * Renders the D3.js chart based on the selected period (weekly bar or monthly line).
-         */
-        function renderSubmissionsChart() {
-            const chartContainer = document.getElementById('submissions-chart-container');
-            const width = chartContainer.clientWidth;
-            const height = chartContainer.clientHeight;
-            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-
-            submissionsChartSvg.selectAll("*").remove(); // Clear previous chart
-
-            if (width === 0 || height === 0) { // If container is not visible or has no size
-                console.warn("Chart container has zero width or height. Chart might not render correctly.");
-                noChartDataMessage.classList.remove('hidden'); // Show message if chart can't render
-                return;
+            // Show/hide monthly selectors
+            monthlySelectorsDiv.classList.remove('hidden');
+            // Check if no data for the selected month
+            if (data.every(d => d.count === 0)) {
+                noChartDataMessage.classList.remove('hidden');
             } else {
                 noChartDataMessage.classList.add('hidden');
             }
+        }
+        // Hide monthly selectors if not in monthly view
+        if (currentChartPeriod !== 'monthly') {
+            monthlySelectorsDiv.classList.add('hidden');
+            noChartDataMessage.classList.add('hidden'); // Also hide the no data message for weekly view
+        }
+
+        // X axis
+        const x = d3.scaleBand()
+            .range([0, innerWidth])
+            .domain(data.map(d => d.label))
+            .padding(0.2);
+
+        svg.append("g")
+            .attr("transform", `translate(0,${innerHeight})`)
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .attr("transform", "translate(-10,0)rotate(-45)")
+            .style("text-anchor", "end");
+
+        // Y axis
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.count) + 1 || 5]) // Ensure Y-axis goes up to at least 5
+            .range([innerHeight, 0]);
+
+        svg.append("g")
+            .call(d3.axisLeft(y).ticks(Math.min(d3.max(data, d => d.count) || 5, 5), "d")); // Use "d" for integer ticks
+
+        // Draw chart based on type
+        if (chartType === 'bar') {
+            svg.selectAll("rect")
+                .data(data)
+                .enter()
+                .append("rect")
+                .attr("x", d => x(d.label))
+                .attr("y", d => y(d.count))
+                .attr("width", x.bandwidth())
+                .attr("height", d => innerHeight - y(d.count))
+                .attr("fill", "#60a5fa"); // Tailwind blue-400
+        } else if (chartType === 'line') {
+            const line = d3.line()
+                .x(d => x(d.label) + x.bandwidth() / 2) // Center points in band
+                .y(d => y(d.count));
+
+            svg.append("path")
+                .datum(data)
+                .attr("fill", "none")
+                .attr("stroke", "#8884d8") // Purple color
+                .attr("stroke-width", 3)
+                .attr("d", line);
+
+            // Add circles for data points
+            svg.selectAll("dot")
+                .data(data)
+                .enter()
+                .append("circle")
+                .attr("cx", d => x(d.label) + x.bandwidth() / 2)
+                .attr("cy", d => y(d.count))
+                .attr("r", 5)
+                .attr("fill", "#8884d8")
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 2);
+        }
+    }
 
 
-            const svg = submissionsChartSvg
-                .attr("width", width)
-                .attr("height", height)
-                .append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
+    /**
+     * Populates the year and month dropdowns for the monthly chart view.
+     */
+    function populateYearMonthSelectors() {
+        const currentYear = new Date().getFullYear();
+        // Clear existing options
+        yearSelect.innerHTML = '';
+        monthSelect.innerHTML = '';
 
-            const innerWidth = width - margin.left - margin.right;
-            const innerHeight = height - margin.top - margin.bottom;
+        // Populate years (e.g., current year - 5 to current year + 1)
+        for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+            const option = document.createElement('option');
+            option.value = i.toString();
+            option.textContent = `${i} 年`;
+            yearSelect.appendChild(option);
+        }
+        yearSelect.value = currentYear.toString(); // Default to current year
 
-            let data = [];
-            let chartType = ''; // 'bar' or 'line'
+        // Populate months
+        for (let i = 1; i <= 12; i++) {
+            const monthStr = i.toString().padStart(2, '0');
+            const option = document.createElement('option');
+            option.value = monthStr;
+            option.textContent = `${i} 月`;
+            monthSelect.appendChild(option);
+        }
+        monthSelect.value = (new Date().getMonth() + 1).toString().padStart(2, '0'); // Default to current month
 
-            if (currentChartPeriod === 'weekly') {
-                chartType = 'bar';
-                let chartDataMap = {};
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+        // Add event listeners for changes
+        yearSelect.addEventListener('change', (e) => {
+            selectedYear = e.target.value;
+            renderSubmissionsChart();
+        });
+        monthSelect.addEventListener('change', (e) => {
+            selectedMonth = e.target.value;
+            renderSubmissionsChart();
+        });
+    }
 
-                for (let i = 6; i >= 0; i--) {
-                    const d = new Date(today);
-                    d.setDate(today.getDate() - i);
-                    const dateStr = formatDate(d); // INSEE-MM-DD format
-                    chartDataMap[dateStr] = 0;
-                }
+    // --- Event Handlers ---
 
-                jobRecords.forEach(job => {
-                    const jobDate = job.time ? new Date(job.time) : null;
-                    if (jobDate && !isNaN(jobDate.getTime())) {
-                        const key = formatDate(jobDate); // INSEE-MM-DD
-                        if (chartDataMap.hasOwnProperty(key)) {
-                            chartDataMap[key]++;
-                        }
-                    }
-                });
-                data = Object.keys(chartDataMap).map(key => ({
-                    label: key.substring(5), // MM-DD for display
-                    count: chartDataMap[key]
-                })).sort((a, b) => a.label.localeCompare(b.label));
+    // Mobile menu toggle
+    menuToggle.addEventListener('click', () => {
+        mainSidebar.classList.toggle('hidden');
+        mainSidebar.classList.toggle('open');
+        sidebarBackdrop.classList.toggle('active');
+        document.body.classList.toggle('sidebar-open'); // Add class to body to prevent scroll
+    });
 
-            } else { // monthly
-                chartType = 'line';
-                let chartDataMap = {};
-                // Determine days in selected month/year
-                const daysInMonth = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).getDate();
+    // Close sidebar when clicking on backdrop
+    sidebarBackdrop.addEventListener('click', () => {
+        mainSidebar.classList.add('hidden');
+        mainSidebar.classList.remove('open');
+        sidebarBackdrop.classList.remove('active');
+        document.body.classList.remove('sidebar-open');
+    });
 
-                for (let i = 1; i <= daysInMonth; i++) {
-                    const dayStr = i.toString().padStart(2, '0');
-                    const dateKey = `${selectedYear}-${selectedMonth}-${dayStr}`;
-                    chartDataMap[dateKey] = 0;
-                }
 
-                jobRecords.forEach(record => {
-                    const recordDate = record.time ? new Date(record.time) : null;
-                    if (recordDate && !isNaN(recordDate.getTime())) {
-                        const recordYear = recordDate.getFullYear().toString();
-                        const recordMonth = (recordDate.getMonth() + 1).toString().padStart(2, '0');
-                        const recordDay = recordDate.getDate().toString().padStart(2, '0');
+    // Parse job link or text
+    parseJobBtn.addEventListener('click', handleJobParsing);
 
-                        if (recordYear === selectedYear && recordMonth === selectedMonth) {
-                            const dateKey = `${recordYear}-${recordMonth}-${recordDay}`;
-                            if (chartDataMap.hasOwnProperty(dateKey)) {
-                                chartDataMap[dateKey]++;
-                            }
-                        }
-                    }
-                });
-                data = Object.keys(chartDataMap).map(key => ({
-                    label: key.slice(8), // Just the day part (e.g., "01", "15")
-                    count: chartDataMap[key]
-                })).sort((a, b) => parseInt(a.label) - parseInt(b.label));
+    // Toggle chart period (Weekly/Monthly)
+    toggleWeeklyBtn.addEventListener('click', () => {
+        currentChartPeriod = 'weekly';
+        toggleWeeklyBtn.classList.add('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
+        toggleMonthlyBtn.classList.remove('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
+        toggleMonthlyBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+        renderSubmissionsChart();
+    });
 
-                // Show/hide monthly selectors
-                monthlySelectorsDiv.classList.remove('hidden');
-                // Check if no data for the selected month
-                if (data.every(d => d.count === 0)) {
-                    noChartDataMessage.classList.remove('hidden');
+    toggleMonthlyBtn.addEventListener('click', () => {
+        currentChartPeriod = 'monthly';
+        toggleMonthlyBtn.classList.add('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
+        toggleWeeklyBtn.classList.remove('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
+        toggleWeeklyBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+        renderSubmissionsChart();
+    });
+
+    // Show add new job modal
+    addNewJobBtn.addEventListener('click', () => {
+        modalTitle.textContent = '添加新岗位';
+        jobForm.reset(); // Clear form fields
+        modalTimeInput.value = formatDate(new Date()); // Default to current date
+        modalStatusSelect.value = '投递'; // Ensure default status is '投递'
+        modalLevelSelect.value = '中'; // Ensure default level is '中'
+        editingJobIdInput.value = null; // Clear editing state
+        showModal();
+    });
+
+    // Hide modal
+    cancelModalBtn.addEventListener('click', () => {
+        hideModal();
+    });
+
+    /**
+     * Shows the job modal with animation.
+     */
+    function showModal() {
+        jobModal.classList.remove('hidden');
+        jobModal.querySelector('.modal-content').classList.add('modal-enter-active');
+    }
+
+    /**
+     * Hides the job modal with animation.
+     */
+    function hideModal() {
+        const modalContent = jobModal.querySelector('.modal-content');
+        modalContent.classList.remove('modal-enter-active');
+        modalContent.classList.add('modal-exit-active');
+        setTimeout(() => {
+            jobModal.classList.add('hidden');
+            modalContent.classList.remove('modal-exit-active');
+        }, 300); // Matches CSS transition duration
+    }
+
+    // Submit form (add/edit)
+    jobForm.addEventListener('submit', handleJobSave);
+
+    /**
+     * Handles saving (add/edit) a job record to Firestore or localStorage (demo mode).
+     */
+    async function handleJobSave(e) {
+        e.preventDefault();
+
+        const newJob = {
+            id: editingJobIdInput.value || crypto.randomUUID(), // Use existing ID for edit, new UUID for add
+            time: new Date(modalTimeInput.value),
+            company: modalCompanyInput.value.trim(),
+            position: modalPositionInput.value.trim(),
+            jobLink: modalJobLinkInput.value.trim(), // New: Job Link
+            keywords: modalKeywordsInput.value.trim(),
+            industry: modalIndustryInput.value.trim(),
+            status: modalStatusSelect.value,
+            location: modalLocationInput.value.trim(),
+            notes: modalNotesInput.value.trim(),
+            level: modalLevelSelect.value,
+        };
+
+        // Simple form validation
+        if (!newJob.company || !newJob.position) {
+            displayMessageBox("提示", "公司和岗位名称是必填项！");
+            return;
+        }
+
+        // --- Firestore Integration ---
+        if (db && userId && isAuthReady && firebaseConfig.apiKey !== "YOUR_FIREBASE_API_KEY") {
+            try {
+                const jobsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/jobRecords`);
+                if (editingJobIdInput.value) {
+                    await setDoc(doc(jobsCollectionRef, newJob.id), newJob);
+                    displayMessageBox("成功", "岗位更新成功！");
                 } else {
-                    noChartDataMessage.classList.add('hidden');
+                    await addDoc(jobsCollectionRef, newJob);
+                    displayMessageBox("成功", "岗位添加成功！");
                 }
+                hideModal();
+            } catch (error) {
+                console.error("保存岗位失败:", error);
+                displayMessageBox("错误", `保存岗位失败: ${error.message}`);
             }
-            // Hide monthly selectors if not in monthly view
-            if (currentChartPeriod !== 'monthly') {
-                monthlySelectorsDiv.classList.add('hidden');
-                noChartDataMessage.classList.add('hidden'); // Also hide the no data message for weekly view
+        } else {
+            // --- Local Storage (Demo Mode) ---
+            if (editingJobIdInput.value) {
+                const index = jobRecords.findIndex(job => job.id === newJob.id);
+                if (index !== -1) {
+                    jobRecords[index] = newJob;
+                }
+            } else {
+                newJob.id = crypto.randomUUID(); // Assign a temporary ID for local state
+                jobRecords.push(newJob);
             }
-
-            // X axis
-            const x = d3.scaleBand()
-                .range([0, innerWidth])
-                .domain(data.map(d => d.label))
-                .padding(0.2);
-
-            svg.append("g")
-                .attr("transform", `translate(0,${innerHeight})`)
-                .call(d3.axisBottom(x))
-                .selectAll("text")
-                .attr("transform", "translate(-10,0)rotate(-45)")
-                .style("text-anchor", "end");
-
-            // Y axis
-            const y = d3.scaleLinear()
-                .domain([0, d3.max(data, d => d.count) + 1 || 5]) // Ensure Y-axis goes up to at least 5
-                .range([innerHeight, 0]);
-
-            svg.append("g")
-                .call(d3.axisLeft(y).ticks(Math.min(d3.max(data, d => d.count) || 5, 5), "d")); // Use "d" for integer ticks
-
-            // Draw chart based on type
-            if (chartType === 'bar') {
-                svg.selectAll("rect")
-                    .data(data)
-                    .enter()
-                    .append("rect")
-                    .attr("x", d => x(d.label))
-                    .attr("y", d => y(d.count))
-                    .attr("width", x.bandwidth())
-                    .attr("height", d => innerHeight - y(d.count))
-                    .attr("fill", "#60a5fa"); // Tailwind blue-400
-            } else if (chartType === 'line') {
-                const line = d3.line()
-                    .x(d => x(d.label) + x.bandwidth() / 2) // Center points in band
-                    .y(d => y(d.count));
-
-                svg.append("path")
-                    .datum(data)
-                    .attr("fill", "none")
-                    .attr("stroke", "#8884d8") // Purple color
-                    .attr("stroke-width", 3)
-                    .attr("d", line);
-
-                // Add circles for data points
-                svg.selectAll("dot")
-                    .data(data)
-                    .enter()
-                    .append("circle")
-                    .attr("cx", d => x(d.label) + x.bandwidth() / 2)
-                    .attr("cy", d => y(d.count))
-                    .attr("r", 5)
-                    .attr("fill", "#8884d8")
-                    .attr("stroke", "#fff")
-                    .attr("stroke-width", 2);
-            }
-        }
-
-
-        /**
-         * Populates the year and month dropdowns for the monthly chart view.
-         */
-        function populateYearMonthSelectors() {
-            const currentYear = new Date().getFullYear();
-            // Clear existing options
-            yearSelect.innerHTML = '';
-            monthSelect.innerHTML = '';
-
-            // Populate years (e.g., current year - 5 to current year + 1)
-            for (let i = currentYear - 5; i <= currentYear + 1; i++) {
-                const option = document.createElement('option');
-                option.value = i.toString();
-                option.textContent = `${i} 年`;
-                yearSelect.appendChild(option);
-            }
-            yearSelect.value = currentYear.toString(); // Default to current year
-
-            // Populate months
-            for (let i = 1; i <= 12; i++) {
-                const monthStr = i.toString().padStart(2, '0');
-                const option = document.createElement('option');
-                option.value = monthStr;
-                option.textContent = `${i} 月`;
-                monthSelect.appendChild(option);
-            }
-            monthSelect.value = (new Date().getMonth() + 1).toString().padStart(2, '0'); // Default to current month
-
-            // Add event listeners for changes
-            yearSelect.addEventListener('change', (e) => {
-                selectedYear = e.target.value;
-                renderSubmissionsChart();
-            });
-            monthSelect.addEventListener('change', (e) => {
-                selectedMonth = e.target.value;
-                renderSubmissionsChart();
-            });
-        }
-
-        // --- Event Handlers ---
-
-        // Mobile menu toggle
-        menuToggle.addEventListener('click', () => {
-            mainNav.classList.toggle('hidden');
-        });
-
-        // Parse job link or text
-        parseJobBtn.addEventListener('click', handleJobParsing);
-
-        // Toggle chart period (Weekly/Monthly)
-        toggleWeeklyBtn.addEventListener('click', () => {
-            currentChartPeriod = 'weekly';
-            toggleWeeklyBtn.classList.add('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
-            toggleMonthlyBtn.classList.remove('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
-            toggleMonthlyBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+            saveJobRecords(); // Save to local storage for demo persistence
+            updateOverviewStats();
+            renderJobTable();
             renderSubmissionsChart();
-        });
-
-        toggleMonthlyBtn.addEventListener('click', () => {
-            currentChartPeriod = 'monthly';
-            toggleMonthlyBtn.classList.add('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
-            toggleWeeklyBtn.classList.remove('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
-            toggleWeeklyBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
-            renderSubmissionsChart();
-        });
-
-        // Show add new job modal
-        addNewJobBtn.addEventListener('click', () => {
-            modalTitle.textContent = '添加新岗位';
-            jobForm.reset(); // Clear form fields
-            modalTimeInput.value = formatDate(new Date()); // Default to current date
-            modalStatusSelect.value = '投递'; // Ensure default status is '投递'
-            modalLevelSelect.value = '中'; // Ensure default level is '中'
-            editingJobIdInput.value = null; // Clear editing state
-            showModal();
-        });
-
-        // Hide modal
-        cancelModalBtn.addEventListener('click', () => {
             hideModal();
+            displayMessageBox("警告", "Firebase 未配置，数据已保存到本地存储，但不会同步。");
+        }
+    }
+
+
+    /**
+     * Opens the job modal for editing an existing record.
+     * @param {string} id The ID of the job record to edit.
+     */
+    function openJobModalForEdit(id) {
+        const job = jobRecords.find(j => j.id == id);
+        if (job) {
+            modalTitle.textContent = '编辑岗位';
+            editingJobIdInput.value = job.id;
+            modalTimeInput.value = job.time ? formatDate(job.time) : '';
+            modalCompanyInput.value = job.company || '';
+            modalPositionInput.value = job.position || '';
+            modalJobLinkInput.value = job.jobLink || ''; // Populate new job link field
+            modalKeywordsInput.value = job.keywords || '';
+            modalIndustryInput.value = job.industry || '';
+            modalStatusSelect.value = job.status || '投递';
+            modalLocationInput.value = job.location || '';
+            modalNotesInput.value = job.notes || '';
+            modalLevelSelect.value = job.level || '中';
+            showModal();
+        }
+    }
+
+    /**
+     * Confirms and deletes a job record.
+     * @param {string} id The ID of the job record to delete.
+     */
+    async function confirmDeleteJob(id) {
+        // --- Firestore Integration ---
+        if (db && userId && isAuthReady && firebaseConfig.apiKey !== "YOUR_FIREBASE_API_KEY") {
+            try {
+                const jobDocRef = doc(db, `artifacts/${appId}/users/${userId}/jobRecords`, id);
+                await deleteDoc(jobDocRef);
+                displayMessageBox("成功", "岗位删除成功！");
+            } catch (error) {
+                console.error("删除岗位失败:", error);
+                displayMessageBox("错误", `删除岗位失败: ${error.message}`);
+            }
+        } else {
+            // --- Local Storage (Demo Mode) ---
+            jobRecords = jobRecords.filter(job => job.id != id);
+            saveJobRecords();
+            updateOverviewStats();
+            renderJobTable();
+            renderSubmissionsChart();
+            displayMessageBox("警告", "Firebase 未配置，数据已从本地存储删除。");
+        }
+    }
+
+    // --- Filter and Sort Event Listeners ---
+    globalSearchInput.addEventListener('input', renderJobTable);
+    filterStatusSelect.addEventListener('change', renderJobTable);
+    filterStartDateInput.addEventListener('change', renderJobTable);
+    filterEndDateInput.addEventListener('change', renderJobTable);
+
+    // Table header click for sorting
+    tableHeaders.forEach(header => {
+        header.addEventListener('click', (e) => {
+            const sortKey = e.currentTarget.dataset.sortKey;
+            if (!sortKey) return;
+
+            if (currentSortColumn === sortKey) {
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = sortKey;
+                currentSortOrder = 'asc'; // Default to ascending when changing column
+            }
+            renderJobTable();
         });
+    });
 
-        /**
-         * Shows the job modal with animation.
-         */
-        function showModal() {
-            jobModal.classList.remove('hidden');
-            jobModal.querySelector('.modal-content').classList.add('modal-enter-active');
+    resetFiltersBtn.addEventListener('click', () => {
+        globalSearchInput.value = '';
+        filterStatusSelect.value = '';
+        const today = new Date().toISOString().slice(0, 10);
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        filterStartDateInput.value = formatDate(oneMonthAgo);
+        filterEndDateInput.value = today;
+
+        currentSortColumn = 'time';
+        currentSortOrder = 'desc';
+        renderJobTable();
+    });
+
+    document.getElementById('interview-count-box').addEventListener('click', () => {
+        filterStatusSelect.value = '一面'; // Filter to a representative interview status
+        renderJobTable();
+    });
+    document.getElementById('offer-count-box').addEventListener('click', () => {
+        filterStatusSelect.value = 'OC';
+        renderJobTable();
+    });
+
+    // --- Custom Dialog Logic (replacing native alert/confirm) ---
+    // Global variable for message box callback
+    let messageBoxCallback = null;
+
+    /**
+     * Displays a custom message box (replaces alert/confirm).
+     * @param {string} title - The title of the message box.
+     * @param {string} message - The content message.
+     * @param {boolean} showCancel - Whether to show a cancel button (makes it like confirm).
+     * @param {function} callback - Callback function (true for confirm, false for cancel).
+     */
+    function displayMessageBox(title, message, showCancel = false, callback = null) {
+        const modal = document.getElementById('messageBoxModal');
+        const titleElem = document.getElementById('messageBoxTitle');
+        const contentElem = document.getElementById('messageBoxContent');
+        const confirmBtn = document.getElementById('messageBoxConfirmBtn');
+        const cancelBtn = document.getElementById('messageBoxCancelBtn');
+
+        titleElem.textContent = title;
+        contentElem.textContent = message;
+
+        // Clear previous listeners to avoid duplicates
+        confirmBtn.onclick = null;
+        cancelBtn.onclick = null;
+
+        if (callback) {
+            messageBoxCallback = callback;
+            confirmBtn.onclick = () => {
+                messageBoxCallback(true);
+                hideMessageBox();
+            };
+            cancelBtn.onclick = () => {
+                messageBoxCallback(false);
+                hideMessageBox();
+            };
+            // For confirm type, show both buttons
+            confirmBtn.classList.remove('hidden');
+            cancelBtn.classList.remove('hidden');
+        } else {
+            // For alert type, only show OK button
+            confirmBtn.onclick = hideMessageBox;
+            confirmBtn.classList.remove('hidden');
+            cancelBtn.classList.add('hidden');
         }
 
-        /**
-         * Hides the job modal with animation.
-         */
-        function hideModal() {
-            const modalContent = jobModal.querySelector('.modal-content');
-            modalContent.classList.remove('modal-enter-active');
-            modalContent.classList.add('modal-exit-active');
-            setTimeout(() => {
-                jobModal.classList.add('hidden');
-                modalContent.classList.remove('modal-exit-active');
-            }, 300); // Matches CSS transition duration
+        modal.classList.remove('hidden');
+        modal.querySelector('.transform').classList.add('modal-enter-active');
+    }
+
+    function hideMessageBox() {
+        const modal = document.getElementById('messageBoxModal');
+        const modalContent = modal.querySelector('.transform');
+        modalContent.classList.remove('modal-enter-active');
+        modalContent.classList.add('modal-exit-active');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modalContent.classList.remove('modal-exit-active');
+            messageBoxCallback = null; // Clear callback
+        }, 300);
+    }
+    // Rename showCustomAlert to displayMessageBox for consistency
+    const showCustomAlert = (message) => displayMessageBox("提示", message);
+    const showCustomConfirm = (message, onConfirm) => displayMessageBox("确认", message, true, onConfirm);
+
+
+    /**
+     * Handles parsing job information from input using LLM.
+     */
+    async function handleJobParsing() {
+        const jobParsingInput = parseJobInput.value.trim();
+        if (!jobParsingInput) {
+            showCustomAlert("请输入岗位链接或文字！");
+            return;
         }
 
-        // Submit form (add/edit)
-        jobForm.addEventListener('submit', handleJobSave);
+        // Show a loading indicator
+        parseJobBtn.textContent = '解析中...';
+        parseJobBtn.disabled = true;
 
-        /**
-         * Handles saving (add/edit) a job record to Firestore or localStorage (demo mode).
-         */
-        async function handleJobSave(e) {
-            e.preventDefault();
+        // --- Demo mode fallback if Firebase config is placeholder ---
+        if (firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
+            const simulatedParsingResult = {
+                company: '模拟公司',
+                position: '模拟岗位',
+                location: '模拟城市',
+                keywords: '模拟关键词',
+                industry: '模拟行业',
+                notes: '解析自模拟模式',
+                jobLink: jobParsingInput.startsWith('http') ? jobParsingInput : '',
+            };
+            // Populate modal with simulated data
+            editingJobIdInput.value = null; // Ensure add mode
+            modalTitle.textContent = '添加新岗位 (解析)';
+            modalTimeInput.value = formatDate(new Date());
+            modalCompanyInput.value = simulatedParsingResult.company;
+            modalPositionInput.value = simulatedParsingResult.position;
+            modalJobLinkInput.value = simulatedParsingResult.jobLink;
+            modalKeywordsInput.value = simulatedParsingResult.keywords;
+            modalIndustryInput.value = simulatedParsingResult.industry;
+            modalStatusSelect.value = '投递';
+            modalLocationInput.value = simulatedParsingResult.location;
+            modalNotesInput.value = simulatedParsingResult.notes;
+            modalLevelSelect.value = '中';
+            showModal();
+            parseJobInput.value = '';
+            parseJobBtn.textContent = '解析并添加岗位';
+            parseJobBtn.disabled = false;
+            return;
+        }
 
-            const newJob = {
-                id: editingJobIdInput.value || crypto.randomUUID(), // Use existing ID for edit, new UUID for add
-                time: new Date(modalTimeInput.value),
-                company: modalCompanyInput.value.trim(),
-                position: modalPositionInput.value.trim(),
-                jobLink: modalJobLinkInput.value.trim(), // New: Job Link
-                keywords: modalKeywordsInput.value.trim(),
-                industry: modalIndustryInput.value.trim(),
-                status: modalStatusSelect.value,
-                location: modalLocationInput.value.trim(),
-                notes: modalNotesInput.value.trim(),
-                level: modalLevelSelect.value,
+        // --- LLM API Call ---
+        try {
+            const prompt = `请从以下招聘信息中提取公司名称 (company)、岗位名称 (position)、城市/地点 (location)、关键词 (keywords, 逗号分隔)、行业 (industry)、岗位链接 (jobLink) 和备注 (notes)。如果无法提取特定字段，请使用空字符串。只返回一个JSON对象，不要包含任何额外文本或Markdown格式。请严格按照 {"company": "", "position": "", "location": "", "keywords": "", "industry": "", "jobLink": "", "notes": ""} 的格式返回。招聘信息：\n\n${jobParsingInput}`;
+            
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            company: { type: "STRING" },
+                            position: { type: "STRING" },
+                            location: { type: "STRING" },
+                            keywords: { type: "STRING" },
+                            industry: { type: "STRING" },
+                            jobLink: { type: "STRING" },
+                            notes: { type: "STRING" }
+                        },
+                        // Order properties to ensure consistency if the LLM respects it
+                        propertyOrdering: ["company", "position", "location", "keywords", "industry", "jobLink", "notes"]
+                    }
+                }
             };
 
-            // Simple form validation
-            if (!newJob.company || !newJob.position) {
-                displayMessageBox("提示", "公司和岗位名称是必填项！");
-                return;
-            }
+            const apiKey = ""; // Canvas will provide this if empty
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
-            // --- Firestore Integration ---
-            if (db && userId && isAuthReady && firebaseConfig.apiKey !== "YOUR_FIREBASE_API_KEY") {
-                try {
-                    const jobsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/jobRecords`);
-                    if (editingJobIdInput.value) {
-                        await setDoc(doc(jobsCollectionRef, newJob.id), newJob);
-                        displayMessageBox("成功", "岗位更新成功！");
-                    } else {
-                        await addDoc(jobsCollectionRef, newJob);
-                        displayMessageBox("成功", "岗位添加成功！");
-                    }
-                    hideModal();
-                } catch (error) {
-                    console.error("保存岗位失败:", error);
-                    displayMessageBox("错误", `保存岗位失败: ${error.message}`);
-                }
-            } else {
-                // --- Local Storage (Demo Mode) ---
-                if (editingJobIdInput.value) {
-                    const index = jobRecords.findIndex(job => job.id === newJob.id);
-                    if (index !== -1) {
-                        jobRecords[index] = newJob;
-                    }
-                } else {
-                    newJob.id = crypto.randomUUID(); // Assign a temporary ID for local state
-                    jobRecords.push(newJob);
-                }
-                saveJobRecords(); // Save to local storage for demo persistence
-                updateOverviewStats();
-                renderJobTable();
-                renderSubmissionsChart();
-                hideModal();
-                displayMessageBox("警告", "Firebase 未配置，数据已保存到本地存储，但不会同步。");
-            }
-        }
-
-
-        /**
-         * Opens the job modal for editing an existing record.
-         * @param {string} id The ID of the job record to edit.
-         */
-        function openJobModalForEdit(id) {
-            const job = jobRecords.find(j => j.id == id);
-            if (job) {
-                modalTitle.textContent = '编辑岗位';
-                editingJobIdInput.value = job.id;
-                modalTimeInput.value = job.time ? formatDate(job.time) : '';
-                modalCompanyInput.value = job.company || '';
-                modalPositionInput.value = job.position || '';
-                modalJobLinkInput.value = job.jobLink || ''; // Populate new job link field
-                modalKeywordsInput.value = job.keywords || '';
-                modalIndustryInput.value = job.industry || '';
-                modalStatusSelect.value = job.status || '投递';
-                modalLocationInput.value = job.location || '';
-                modalNotesInput.value = job.notes || '';
-                modalLevelSelect.value = job.level || '中';
-                showModal();
-            }
-        }
-
-        /**
-         * Confirms and deletes a job record.
-         * @param {string} id The ID of the job record to delete.
-         */
-        async function confirmDeleteJob(id) {
-            // --- Firestore Integration ---
-            if (db && userId && isAuthReady && firebaseConfig.apiKey !== "YOUR_FIREBASE_API_KEY") {
-                try {
-                    const jobDocRef = doc(db, `artifacts/${appId}/users/${userId}/jobRecords`, id);
-                    await deleteDoc(jobDocRef);
-                    displayMessageBox("成功", "岗位删除成功！");
-                } catch (error) {
-                    console.error("删除岗位失败:", error);
-                    displayMessageBox("错误", `删除岗位失败: ${error.message}`);
-                }
-            } else {
-                // --- Local Storage (Demo Mode) ---
-                jobRecords = jobRecords.filter(job => job.id != id);
-                saveJobRecords();
-                updateOverviewStats();
-                renderJobTable();
-                renderSubmissionsChart();
-                displayMessageBox("警告", "Firebase 未配置，数据已从本地存储删除。");
-            }
-        }
-
-        // --- Filter and Sort Event Listeners ---
-        globalSearchInput.addEventListener('input', renderJobTable);
-        filterStatusSelect.addEventListener('change', renderJobTable);
-        filterStartDateInput.addEventListener('change', renderJobTable);
-        filterEndDateInput.addEventListener('change', renderJobTable);
-
-        // Table header click for sorting
-        tableHeaders.forEach(header => {
-            header.addEventListener('click', (e) => {
-                const sortKey = e.currentTarget.dataset.sortKey;
-                if (!sortKey) return;
-
-                if (currentSortColumn === sortKey) {
-                    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
-                } else {
-                    currentSortColumn = sortKey;
-                    currentSortOrder = 'asc'; // Default to ascending when changing column
-                }
-                renderJobTable();
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
-        });
 
-        resetFiltersBtn.addEventListener('click', () => {
-            globalSearchInput.value = '';
-            filterStatusSelect.value = '';
-            const today = new Date().toISOString().slice(0, 10);
-            const oneMonthAgo = new Date();
-            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-            filterStartDateInput.value = formatDate(oneMonthAgo);
-            filterEndDateInput.value = today;
-
-            currentSortColumn = 'time';
-            currentSortOrder = 'desc';
-            renderJobTable();
-        });
-
-        // Reverted: Removed applied-count-box click event listener as per user request
-        document.getElementById('interview-count-box').addEventListener('click', () => {
-            filterStatusSelect.value = '一面'; // Filter to a representative interview status
-            renderJobTable();
-        });
-        document.getElementById('offer-count-box').addEventListener('click', () => {
-            filterStatusSelect.value = 'OC';
-            renderJobTable();
-        });
-
-        // --- Custom Dialog Logic (replacing native alert/confirm) ---
-        // Global variable for message box callback
-        let messageBoxCallback = null;
-
-        /**
-         * Displays a custom message box (replaces alert/confirm).
-         * @param {string} title - The title of the message box.
-         * @param {string} message - The content message.
-         * @param {boolean} showCancel - Whether to show a cancel button (makes it like confirm).
-         * @param {function} callback - Callback function (true for confirm, false for cancel).
-         */
-        function displayMessageBox(title, message, showCancel = false, callback = null) {
-            const modal = document.getElementById('messageBoxModal');
-            const titleElem = document.getElementById('messageBoxTitle');
-            const contentElem = document.getElementById('messageBoxContent');
-            const confirmBtn = document.getElementById('messageBoxConfirmBtn');
-            const cancelBtn = document.getElementById('messageBoxCancelBtn');
-
-            titleElem.textContent = title;
-            contentElem.textContent = message;
-
-            // Clear previous listeners to avoid duplicates
-            confirmBtn.onclick = null;
-            cancelBtn.onclick = null;
-
-            if (callback) {
-                messageBoxCallback = callback;
-                confirmBtn.onclick = () => {
-                    messageBoxCallback(true);
-                    hideMessageBox();
-                };
-                cancelBtn.onclick = () => {
-                    messageBoxCallback(false);
-                    hideMessageBox();
-                };
-                // For confirm type, show both buttons
-                confirmBtn.classList.remove('hidden');
-                cancelBtn.classList.remove('hidden');
-            } else {
-                // For alert type, only show OK button
-                confirmBtn.onclick = hideMessageBox;
-                confirmBtn.classList.remove('hidden');
-                cancelBtn.classList.add('hidden');
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`HTTP 错误! 状态码: ${response.status}. 响应: ${errorBody}`);
             }
 
-            modal.classList.remove('hidden');
-            modal.querySelector('.transform').classList.add('modal-enter-active');
-        }
-
-        function hideMessageBox() {
-            const modal = document.getElementById('messageBoxModal');
-            const modalContent = modal.querySelector('.transform');
-            modalContent.classList.remove('modal-enter-active');
-            modalContent.classList.add('modal-exit-active');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modalContent.classList.remove('modal-exit-active');
-                messageBoxCallback = null; // Clear callback
-            }, 300);
-        }
-        // Rename showCustomAlert to displayMessageBox for consistency
-        const showCustomAlert = (message) => displayMessageBox("提示", message);
-        const showCustomConfirm = (message, onConfirm) => displayMessageBox("确认", message, true, onConfirm);
-
-
-        /**
-         * Handles parsing job information from input using LLM.
-         */
-        async function handleJobParsing() {
-            const jobParsingInput = parseJobInput.value.trim();
-            if (!jobParsingInput) {
-                showCustomAlert("请输入岗位链接或文字！");
-                return;
-            }
-
-            // Show a loading indicator
-            parseJobBtn.textContent = '解析中...';
-            parseJobBtn.disabled = true;
-
-            // --- Demo mode fallback if Firebase config is placeholder ---
-            if (firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
-                const simulatedParsingResult = {
-                    company: '模拟公司',
-                    position: '模拟岗位',
-                    location: '模拟城市',
-                    keywords: '模拟关键词',
-                    industry: '模拟行业',
-                    notes: '解析自模拟模式',
-                    jobLink: jobParsingInput.startsWith('http') ? jobParsingInput : '',
-                };
-                // Populate modal with simulated data
-                editingJobIdInput.value = null; // Ensure add mode
-                modalTitle.textContent = '添加新岗位 (解析)';
-                modalTimeInput.value = formatDate(new Date());
-                modalCompanyInput.value = simulatedParsingResult.company;
-                modalPositionInput.value = simulatedParsingResult.position;
-                modalJobLinkInput.value = simulatedParsingResult.jobLink;
-                modalKeywordsInput.value = simulatedParsingResult.keywords;
-                modalIndustryInput.value = simulatedParsingResult.industry;
-                modalStatusSelect.value = '投递';
-                modalLocationInput.value = simulatedParsingResult.location;
-                modalNotesInput.value = simulatedParsingResult.notes;
-                modalLevelSelect.value = '中';
-                showModal();
-                parseJobInput.value = '';
-                parseJobBtn.textContent = '解析并添加岗位';
-                parseJobBtn.disabled = false;
-                return;
-            }
-
-            // --- LLM API Call ---
-            try {
-                const prompt = `请从以下招聘信息中提取公司名称 (company)、岗位名称 (position)、城市/地点 (location)、关键词 (keywords, 逗号分隔)、行业 (industry)、岗位链接 (jobLink) 和备注 (notes)。如果无法提取特定字段，请使用空字符串。只返回一个JSON对象，不要包含任何额外文本或Markdown格式。请严格按照 {"company": "", "position": "", "location": "", "keywords": "", "industry": "", "jobLink": "", "notes": ""} 的格式返回。招聘信息：\n\n${jobParsingInput}`;
-
-                const payload = {
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                company: { type: "STRING" },
-                                position: { type: "STRING" },
-                                location: { type: "STRING" },
-                                keywords: { type: "STRING" },
-                                industry: { type: "STRING" },
-                                jobLink: { type: "STRING" },
-                                notes: { type: "STRING" }
-                            },
-                            // Order properties to ensure consistency if the LLM respects it
-                            propertyOrdering: ["company", "position", "location", "keywords", "industry", "jobLink", "notes"]
-                        }
-                    }
-                };
-
-                const apiKey = ""; // Canvas will provide this if empty
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorBody = await response.text();
-                    throw new Error(`HTTP 错误! 状态码: ${response.status}. 响应: ${errorBody}`);
-                }
-
-                const result = await response.json();
-                // IMPORTANT: For structured responses, the content is directly the JSON string in result.candidates[0].content.parts[0].text
-                const parsedJsonString = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                if (parsedJsonString) {
-                    try {
-                        const parsedData = JSON.parse(parsedJsonString);
-                        editingJobIdInput.value = null; // Ensure add mode
-                        modalTitle.textContent = '添加新岗位 (解析)';
-                        modalTimeInput.value = formatDate(new Date());
-                        modalCompanyInput.value = parsedData.company || '';
-                        modalPositionInput.value = parsedData.position || '';
-                        modalJobLinkInput.value = parsedData.jobLink || (jobParsingInput.startsWith('http') ? jobParsingInput : ''); // Use original input if it's a link and LLM didn't return one
-                        modalKeywordsInput.value = parsedData.keywords || '';
-                        modalIndustryInput.value = parsedData.industry || '';
-                        modalStatusSelect.value = '投递';
-                        modalLocationInput.value = parsedData.location || '';
-                        modalNotesInput.value = parsedData.notes || '';
-                        modalLevelSelect.value = '中';
-                    } catch (jsonParseError) {
-                        console.error("LLM 返回的响应不是有效的 JSON 格式:", parsedJsonString, jsonParseError);
-                        showCustomAlert("解析失败: 大模型返回的响应不是有效的 JSON 格式，请尝试手动填写。");
-                        // Pre-fill job link if it was a URL input
-                        modalJobLinkInput.value = jobParsingInput.startsWith('http') ? jobParsingInput : '';
-                    }
-                } else {
-                    console.warn("LLM 未返回有效解析结果或响应结构不正确。");
-                    showCustomAlert("解析失败: 大模型未返回有效解析结果，请尝试手动填写。");
+            const result = await response.json();
+            // IMPORTANT: For structured responses, the content is directly the JSON string in result.candidates[0].content.parts[0].text
+            const parsedJsonString = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (parsedJsonString) {
+                try {
+                    const parsedData = JSON.parse(parsedJsonString);
+                    editingJobIdInput.value = null; // Ensure add mode
+                    modalTitle.textContent = '添加新岗位 (解析)';
+                    modalTimeInput.value = formatDate(new Date());
+                    modalCompanyInput.value = parsedData.company || '';
+                    modalPositionInput.value = parsedData.position || '';
+                    modalJobLinkInput.value = parsedData.jobLink || (jobParsingInput.startsWith('http') ? jobParsingInput : ''); // Use original input if it's a link and LLM didn't return one
+                    modalKeywordsInput.value = parsedData.keywords || '';
+                    modalIndustryInput.value = parsedData.industry || '';
+                    modalStatusSelect.value = '投递';
+                    modalLocationInput.value = parsedData.location || '';
+                    modalNotesInput.value = parsedData.notes || '';
+                    modalLevelSelect.value = '中';
+                } catch (jsonParseError) {
+                    console.error("LLM 返回的响应不是有效的 JSON 格式:", parsedJsonString, jsonParseError);
+                    showCustomAlert("解析失败: 大模型返回的响应不是有效的 JSON 格式，请尝试手动填写。");
                     // Pre-fill job link if it was a URL input
                     modalJobLinkInput.value = jobParsingInput.startsWith('http') ? jobParsingInput : '';
                 }
-                showModal(); // Open modal with parsed data or pre-filled link
-                parseJobInput.value = ''; // Clear input
-            } catch (error) {
-                console.error("岗位解析失败:", error);
-                showCustomAlert(`岗位解析失败: ${error.message}。请检查您的网络连接或稍后再试。`);
-                // Attempt to pre-fill job link if it was a URL, then open for manual fill
+            } else {
+                console.warn("LLM 未返回有效解析结果或响应结构不正确。");
+                showCustomAlert("解析失败: 大模型未返回有效解析结果，请尝试手动填写。");
+                // Pre-fill job link if it was a URL input
                 modalJobLinkInput.value = jobParsingInput.startsWith('http') ? jobParsingInput : '';
-                showModal();
-            } finally {
-                parseJobBtn.textContent = '解析并添加岗位';
-                parseJobBtn.disabled = false;
             }
+            showModal(); // Open modal with parsed data or pre-filled link
+            parseJobInput.value = ''; // Clear input
+        } catch (error) {
+            console.error("岗位解析失败:", error);
+            showCustomAlert(`岗位解析失败: ${error.message}。请检查您的网络连接或稍后再试。`);
+            // Attempt to pre-fill job link if it was a URL, then open for manual fill
+            modalJobLinkInput.value = jobParsingInput.startsWith('http') ? jobParsingInput : '';
+            showModal();
+        } finally {
+            parseJobBtn.textContent = '解析并添加岗位';
+            parseJobBtn.disabled = false;
         }
+    }
 
-    </script>
-    <!-- D3.js CDN (global access) -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+</script>
+<!-- D3.js CDN (global access) -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
 </body>
-
 </html>
-<style>
-    /* 优化移动端显示，确保内容自适应屏幕宽度 */
-    html,
-    body {
-        width: 100%;
-        max-width: 100vw;
-        overflow-x: hidden;
-    }
-
-    /* 让主容器宽度自适应并有适当内边距 */
-    .container,
-    .max-w-4xl,
-    .max-w-3xl,
-    .max-w-2xl,
-    .max-w-xl,
-    .max-w-lg,
-    .max-w-md,
-    .max-w-sm {
-        width: 100% !important;
-        max-width: 100vw !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        box-sizing: border-box;
-    }
-
-    /* 表单和弹窗在小屏幕下全宽显示 */
-    @media (max-width: 640px) {
-
-        .rounded-xl,
-        .rounded-lg {
-            border-radius: 0.5rem !important;
-        }
-
-        .modal,
-        .shadow-custom {
-            width: 100vw !important;
-            min-width: 0 !important;
-            left: 0 !important;
-            margin: 0 !important;
-            border-radius: 0.5rem !important;
-        }
-
-        .modal-content,
-        .p-8,
-        .p-6,
-        .p-4 {
-            padding: 1rem !important;
-        }
-
-        .flex,
-        .grid {
-            flex-direction: column !important;
-            gap: 0.5rem !important;
-        }
-
-        .overflow-x-auto {
-            overflow-x: auto !important;
-        }
-
-        table {
-            font-size: 0.95rem !important;
-        }
-    }
-
-    /* 优化按钮和输入框在移动端的尺寸 */
-    input,
-    select,
-    textarea,
-    button {
-        font-size: 1rem !important;
-    }
-</style>
