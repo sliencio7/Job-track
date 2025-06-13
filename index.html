@@ -5,11 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Track - 求职追踪</title>
-    <!-- 引入 Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 D3.js CDN 用于图表绘制 -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <!-- 引入 Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* Custom CSS to ensure Inter font, fallback to generic sans-serif */
@@ -73,27 +70,34 @@
             white-space: nowrap;
             border-width: 0;
         }
+
+        /* Styling for contenteditable cells */
+        [contenteditable="true"] {
+            outline: 2px solid #3b82f6;
+            /* Blue-500 equivalent */
+            background-color: #e0f2fe;
+            /* Blue-50 equivalent */
+            border-radius: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            transition: all 0.1s ease-in-out;
+        }
     </style>
 </head>
 
 <body class="flex min-h-screen">
-    <!-- Main application container -->
     <div class="flex flex-col md:flex-row w-full bg-gray-50">
-        <!-- Left Sidebar -->
         <aside class="w-full md:w-64 bg-white p-6 md:p-8 shadow-lg md:shadow-xl flex-shrink-0 rounded-r-xl">
             <div class="flex items-center justify-between mb-8 md:mb-10">
                 <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">Job Track</h1>
-                <!-- Menu toggle for mobile -->
                 <button id="menu-toggle" class="md:hidden text-gray-600 focus:outline-none">
                     <i class="fas fa-bars text-xl"></i>
                 </button>
             </div>
 
-            <!-- Navigation menu -->
             <nav id="main-nav" class="hidden md:block">
                 <ul class="space-y-4">
                     <li>
-                        <a href="#"
+                        <a href="#" id="tutorial-link" role="button"
                             class="flex items-center p-3 text-lg font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition duration-200">
                             <i class="fas fa-book-open mr-3"></i>使用教程
                         </a>
@@ -112,7 +116,6 @@
                     </li>
                 </ul>
                 <div class="mt-8 border-t border-gray-200 pt-8 space-y-4">
-                    <!-- Placeholder for future mini-program integrations -->
                     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">未来集成</h3>
                     <ul>
                         <li>
@@ -144,29 +147,25 @@
             </nav>
         </aside>
 
-        <!-- Right main content area -->
         <main class="flex-1 p-6 md:p-10">
-            <!-- Top user header -->
             <header class="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
                 <h2 class="text-2xl font-bold text-gray-800">概览</h2>
                 <div class="flex items-center space-x-4">
                     <div class="flex flex-col text-right">
                         <span class="text-sm font-medium text-gray-700" id="user-id">ID: user_12345</span>
-                        <span class="text-xs text-gray-500" id="registration-time">注册时间: 2023-01-01</span>
+                        <span class="text-xs text-gray-50" id="registration-time">注册时间: 2023-01-01</span>
                     </div>
                     <img src="https://placehold.co/48x48/999999/FFFFFF/png?text=AV" alt="用户头像"
                         class="w-12 h-12 rounded-full border-2 border-blue-400 shadow-md">
                 </div>
             </header>
 
-            <!-- Statistics overview section -->
             <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <!-- Job parsing -->
                 <div
                     class="bg-white p-6 rounded-xl shadow-md border border-gray-200 col-span-1 md:col-span-1 animate-fadeIn">
                     <h3 class="text-xl font-semibold text-gray-700 mb-4">岗位解析</h3>
                     <div class="flex flex-col space-y-4">
-                        <textarea id="job-link-input"
+                        <textarea id="job-raw-input"
                             placeholder="粘贴岗位链接或文字到此，例如：https://careers.google.com/jobs/results/12345/ 或 岗位名称，公司，要求..."
                             class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 h-24 resize-y text-gray-700"></textarea>
                         <button id="parse-job-btn"
@@ -176,7 +175,6 @@
                     </div>
                 </div>
 
-                <!-- Interview and Offer statistics -->
                 <div
                     class="bg-white p-6 rounded-xl shadow-md border border-gray-200 col-span-1 md:col-span-1 flex flex-col justify-between animate-fadeIn">
                     <h3 class="text-xl font-semibold text-gray-700 mb-4">面试与 Offer</h3>
@@ -194,7 +192,6 @@
                     </div>
                 </div>
 
-                <!-- Submission overview (chart) -->
                 <div
                     class="bg-white p-6 rounded-xl shadow-md border border-gray-200 col-span-1 md:col-span-1 flex flex-col animate-fadeIn">
                     <h3 class="text-xl font-semibold text-gray-700 mb-4">投递情况一览</h3>
@@ -204,7 +201,6 @@
                         <button id="toggle-monthly"
                             class="px-4 py-2 rounded-lg font-medium text-sm transition duration-200 text-gray-600 hover:bg-gray-100">月度</button>
                     </div>
-                    <!-- Monthly view selectors -->
                     <div id="monthly-selectors" class="flex space-x-4 mb-4 justify-center hidden">
                         <label for="year-select" class="sr-only">选择年份</label>
                         <select id="year-select"
@@ -216,7 +212,6 @@
                             class="px-4 py-2 rounded-md border border-gray-300 text-lg focus:ring-blue-500 focus:border-blue-500">
                         </select>
                     </div>
-                    <!-- D3.js Chart Container -->
                     <div id="submissions-chart-container" class="flex-1 w-full h-48 flex items-center justify-center">
                         <svg id="submissions-chart" class="w-full h-full"></svg>
                     </div>
@@ -224,7 +219,6 @@
                 </div>
             </section>
 
-            <!-- Job list table -->
             <section class="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-fadeIn">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-xl font-semibold text-gray-700">岗位情况</h3>
@@ -234,7 +228,6 @@
                     </button>
                 </div>
 
-                <!-- Filter and sort area -->
                 <div class="flex flex-wrap items-center gap-4 mb-4">
                     <input type="text" id="global-search-input" placeholder="全局搜索 (公司, 岗位, 关键词等)"
                         class="flex-1 min-w-[200px] p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-400 text-gray-700">
@@ -265,7 +258,6 @@
                     </button>
                 </div>
 
-                <!-- Table container -->
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
                         <thead class="bg-gray-50">
@@ -315,7 +307,6 @@
                             </tr>
                         </thead>
                         <tbody id="job-entries-tbody" class="bg-white divide-y divide-gray-200">
-                            <!-- Job records will be dynamically loaded here by JavaScript -->
                         </tbody>
                     </table>
                 </div>
@@ -324,41 +315,40 @@
         </main>
     </div>
 
-    <!-- Modal for adding/editing jobs -->
     <div id="job-modal"
         class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden modal-backdrop animate-fadeIn">
-        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg mx-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-6">添加新岗位</h3>
-            <form id="job-form" class="space-y-4">
+            <form id="job-form" class="space-y-3">
                 <div>
                     <label for="modal-time" class="block text-gray-700 text-sm font-medium mb-1">投递时间</label>
                     <input type="date" id="modal-time"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
+                        class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
                 </div>
                 <div>
                     <label for="modal-company" class="block text-gray-700 text-sm font-medium mb-1">公司</label>
                     <input type="text" id="modal-company" placeholder="公司名称"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
+                        class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
                 </div>
                 <div>
                     <label for="modal-position" class="block text-gray-700 text-sm font-medium mb-1">岗位</label>
                     <input type="text" id="modal-position" placeholder="岗位名称"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
+                        class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
                 </div>
                 <div>
                     <label for="modal-keywords" class="block text-gray-700 text-sm font-medium mb-1">关键词</label>
                     <input type="text" id="modal-keywords" placeholder="例如：前端, Vue, React"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
+                        class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
                 </div>
                 <div>
                     <label for="modal-industry" class="block text-gray-700 text-sm font-medium mb-1">行业</label>
                     <input type="text" id="modal-industry" placeholder="例如：互联网, 金融"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
+                        class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
                 </div>
                 <div>
                     <label for="modal-status" class="block text-gray-700 text-sm font-medium mb-1">状态</label>
                     <select id="modal-status"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
+                        class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
                         <option value="投递">投递</option>
                         <option value="测评">测评</option>
                         <option value="笔试">笔试</option>
@@ -372,18 +362,36 @@
                 </div>
                 <div>
                     <label for="modal-location" class="block text-gray-700 text-sm font-medium mb-1">地点</label>
-                    <input type="text" id="modal-location" placeholder="例如：上海, 远程"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
+                    <div class="flex space-x-2">
+                        <select id="modal-location"
+                            class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
+                            <option value="">请选择地点</option>
+                            <option value="北京">北京</option>
+                            <option value="上海">上海</option>
+                            <option value="广州">广州</option>
+                            <option value="深圳">深圳</option>
+                            <option value="杭州">杭州</option>
+                            <option value="成都">成都</option>
+                            <option value="武汉">武汉</option>
+                            <option value="南京">南京</option>
+                            <option value="苏州">苏州</option>
+                            <option value="远程">远程</option>
+                            <option value="不限">不限</option>
+                            <option value="其他">其他 (请填写)</option>
+                        </select>
+                        <input type="text" id="modal-location-other" placeholder="请填写具体地点"
+                            class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700 hidden">
+                    </div>
                 </div>
                 <div>
                     <label for="modal-notes" class="block text-gray-700 text-sm font-medium mb-1">备注</label>
                     <textarea id="modal-notes" placeholder="其他重要信息"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent h-20 resize-y text-gray-700"></textarea>
+                        class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent h-20 resize-y text-gray-700"></textarea>
                 </div>
                 <div>
                     <label for="modal-level" class="block text-gray-700 text-sm font-medium mb-1">等级分类</label>
                     <select id="modal-level"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
+                        class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-transparent text-gray-700">
                         <option value="低">低</option>
                         <option value="中">中</option>
                         <option value="高">高</option>
@@ -404,6 +412,148 @@
         </div>
     </div>
 
+    <div id="tutorial-modal"
+        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden modal-backdrop animate-fadeIn">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h3 class="text-2xl font-bold text-gray-800">Job Track 求职追踪器 - 使用教程与常见问题</h3>
+                <button id="close-tutorial-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="prose max-w-none text-gray-800">
+                <h3 class="text-xl font-bold mb-3">一、核心功能概览</h3>
+
+                <h4 class="text-lg font-semibold mb-2">1. 岗位解析与快速添加</h4>
+                <p>
+                    <strong>功能描述：</strong> 智能识别你粘贴的岗位信息（包括链接或文字描述），自动填充到添加/编辑表单中，节省手动输入的时间。
+                </p>
+                <p>
+                    <strong>使用方法：</strong>
+                </p>
+                <ol class="list-decimal list-inside ml-4 mb-4">
+                    <li>在主页面左侧的“岗位解析”文本框中，粘贴<strong>招聘网站的网页链接</strong>（例如：BOSS直聘、猎聘、字节跳动官网招聘页面的链接）或<strong>岗位职责描述的文字内容</strong>。
+                    </li>
+                    <li>点击“解析并添加岗位”按钮。</li>
+                    <li>系统会尝试识别公司、岗位、地点、关键词等信息，并预填充到弹出的“添加新岗位”表单中。你可以核对并修改，然后点击“保存”即可。</li>
+                </ol>
+
+                <h4 class="text-lg font-semibold mb-2">2. 添加/编辑岗位信息</h4>
+                <ul class="list-disc list-inside ml-4 mb-4">
+                    <li><strong>手动添加：</strong> 点击主页面“岗位情况”旁边的“添加新岗位”按钮，手动填写所有岗位信息。</li>
+                    <li><strong>表格内快速编辑：</strong>
+                        <ul class="list-circle list-inside ml-4 mt-1">
+                            <li>双击表格中除“操作”列以外的任意单元格（如：公司、岗位、状态、备注、地点等）。</li>
+                            <li>相应单元格会变为可编辑状态（输入框或下拉框）。</li>
+                            <li>修改内容后，点击单元格外部或按下 <code>Enter</code> 键（备注/文本域除外）即可保存修改。</li>
+                        </ul>
+                    </li>
+                    <li><strong>模态框编辑：</strong> 点击表格“操作”列中的“编辑”图标（铅笔状），会弹出完整的编辑表单，方便你进行更详细的修改。</li>
+                </ul>
+
+                <h4 class="text-lg font-semibold mb-2">3. 筛选与排序</h4>
+                <ul class="list-disc list-inside ml-4 mb-4">
+                    <li><strong>全局搜索：</strong> 在表格上方的搜索框中输入关键词（公司名、岗位、技术栈、地点、备注等），即可实时筛选出包含这些关键词的记录。</li>
+                    <li><strong>状态筛选：</strong> 使用“所有状态”下拉框，快速筛选特定状态（如“OC”、“一面”等）的岗位。</li>
+                    <li><strong>日期筛选：</strong> 选择开始日期和结束日期，查看特定时间段内的投递记录。</li>
+                    <li><strong>重置筛选：</strong> 点击“重置筛选”按钮，清除所有筛选条件，恢复完整列表。</li>
+                    <li><strong>表格排序：</strong> 点击表格头部的列名（如“投递时间”、“公司”、“状态”等），可以对该列进行升序或降序排序。</li>
+                </ul>
+
+                <h4 class="text-lg font-semibold mb-2">4. 数据概览与图表</h4>
+                <ul class="list-disc list-inside ml-4 mb-4">
+                    <li><strong>面试与 Offer 统计：</strong> 页面顶部的“面试”和“Offer”卡片实时显示你的面试总数（包括一面、二面、终面、HR面）和收到的 Offer
+                        数量（OC）。点击这些卡片可快速筛选表格，查看相关岗位。</li>
+                    <li><strong>投递情况一览：</strong>
+                        <ul class="list-circle list-inside ml-4 mt-1">
+                            <li>默认显示“近七日”的投递数量柱状图。</li>
+                            <li>点击“月度”按钮，可切换到按月统计的折线图，并可选择具体年份和月份进行查看。</li>
+                            <li>图表帮助你直观了解投递频率和趋势。</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h3 class="text-xl font-bold mt-6 mb-3">二、移动端使用建议</h3>
+                <p>
+                    我们理解你希望在手机上也能便捷使用。当前版本的 Job Track 网页版针对手机端主要优化了<strong>查看进度</strong>和<strong>简要操作</strong>的体验。
+                </p>
+                <ul class="list-disc list-inside ml-4 mb-4">
+                    <li><strong>查看进度：</strong> 手机端可以方便地查看你的投递列表、面试和 Offer 统计，以及投递图表。</li>
+                    <li><strong>填写数据：</strong> 我们<strong>强烈建议在电脑端进行数据填写</strong>，尤其是在使用“岗位解析”功能时。</li>
+                </ul>
+
+                <h3 class="text-xl font-bold mt-6 mb-3">三、常见问题 (FAQ)</h3>
+
+                <h4 class="text-lg font-semibold mt-4 mb-2">Q1: 为什么我的手机端招聘 APP 链接无法解析？</h4>
+                <p>
+                    <strong>A:</strong> 大部分招聘 APP（如
+                    BOSS直聘、猎聘、智联招聘等）在手机端分享的链接通常是<strong>小程序链接</strong>或其特有的<strong>内嵌浏览器链接</strong>。这些链接并非标准的网页
+                    URL，我们的解析器目前无法直接从这些非标准链接中提取完整信息。
+                </p>
+                <p>
+                    <strong>建议：</strong>
+                </p>
+                <ul class="list-disc list-inside ml-4 mb-4">
+                    <li>在电脑上使用招聘网站的<strong>网页版</strong>，复制浏览器地址栏中的完整 URL。</li>
+                    <li>或者，直接从手机 APP 中<strong>复制岗位描述的文字内容</strong>，粘贴到“岗位解析”文本框中进行解析。</li>
+                </ul>
+
+                <h4 class="text-lg font-semibold mt-4 mb-2">Q2: 我的数据安全吗？会丢失吗？</h4>
+                <p>
+                    <strong>A:</strong> 你的所有求职记录数据都安全地<strong>存储在你的浏览器本地存储 (LocalStorage)</strong>
+                    中，不会上传到任何服务器，所以你的数据是私密且安全的。
+                </p>
+                <p>
+                    <strong>数据丢失风险：</strong>
+                </p>
+                <ul class="list-disc list-inside ml-4 mb-4">
+                    <li>如果你清理浏览器缓存、Cookie 或网站数据，你的求职记录可能会丢失。</li>
+                    <li>如果你更换浏览器（例如从 Chrome 切换到 Firefox）或使用无痕/隐私模式，数据将无法在不同浏览器或模式间同步。</li>
+                </ul>
+                <p>
+                    <strong>建议：</strong> 请勿随意清理浏览器数据。目前版本没有提供数据导出功能，如需备份，可以考虑手动复制表格内容。
+                </p>
+
+                <h4 class="text-lg font-semibold mt-4 mb-2">Q3: “地点”选项里没有我想要的城市怎么办？</h4>
+                <p>
+                    <strong>A:</strong> 在“地点”的下拉框中，除了预设的常见城市外，我们提供了一个“<strong>其他 (请填写)</strong>”选项。
+                </p>
+                <p>
+                    <strong>使用方法：</strong> 选择“其他 (请填写)”，旁边会出现一个新的文本输入框，你可以在其中手动输入任何你需要的地点信息。
+                </p>
+
+                <h4 class="text-lg font-semibold mt-4 mb-2">Q4: 如何修改已添加的岗位信息？</h4>
+                <p>
+                    <strong>A:</strong> 你可以通过两种方式修改：
+                </p>
+                <ul class="list-disc list-inside ml-4 mb-4">
+                    <li><strong>双击编辑：</strong> 直接双击表格中除“操作”列之外的任意单元格，即可进行快速修改。</li>
+                    <li><strong>点击“编辑”按钮：</strong> 点击表格“操作”列中的铅笔图标，会弹出完整的编辑表单，方便你详细修改所有字段。</li>
+                </ul>
+
+                <h4 class="text-lg font-semibold mt-4 mb-2">Q5: 投递情况图表显示“当前月份没有投递记录”？</h4>
+                <p>
+                    <strong>A:</strong> 这可能是因为：
+                </p>
+                <ul class="list-disc list-inside ml-4 mb-4">
+                    <li>你当前选择的月份确实没有投递记录。</li>
+                    <li>图表默认显示“近七日”数据。如果你切换到“月度”视图，请确保你选择了<strong>正确的年份和月份</strong>。</li>
+                    <li>如果数据很少，图表可能看起来是空的，但实际上可能只是值太小。</li>
+                </ul>
+                <p class="mt-6">
+                    如果在使用过程中遇到其他问题或有任何建议，请通过左侧导航栏的“联系我们”或“开发建议”提供反馈，我们将持续优化！
+                </p>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button type="button" id="close-tutorial-modal-btn-bottom"
+                    class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-semibold hover:bg-gray-300 transition duration-200">
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         // Job Track Web App JavaScript Logic
@@ -415,7 +565,7 @@
         const registrationTimeSpan = document.getElementById('registration-time');
         const interviewCountSpan = document.getElementById('interview-count');
         const offerCountSpan = document.getElementById('offer-count');
-        const parseJobInput = document.getElementById('job-link-input');
+        const parseJobInputElem = document.getElementById('job-raw-input');
         const parseJobBtn = document.getElementById('parse-job-btn');
         const toggleWeeklyBtn = document.getElementById('toggle-weekly');
         const toggleMonthlyBtn = document.getElementById('toggle-monthly');
@@ -440,6 +590,7 @@
         const jobModal = document.getElementById('job-modal');
         const modalTitle = document.getElementById('modal-title');
         const jobForm = document.getElementById('job-form');
+        // All fields in the modal
         const modalTimeInput = document.getElementById('modal-time');
         const modalCompanyInput = document.getElementById('modal-company');
         const modalPositionInput = document.getElementById('modal-position');
@@ -447,10 +598,18 @@
         const modalIndustryInput = document.getElementById('modal-industry');
         const modalStatusSelect = document.getElementById('modal-status');
         const modalLocationInput = document.getElementById('modal-location');
+        const modalLocationOtherInput = document.getElementById('modal-location-other');
         const modalNotesInput = document.getElementById('modal-notes');
         const modalLevelSelect = document.getElementById('modal-level');
         const cancelModalBtn = document.getElementById('cancel-modal-btn');
         const saveJobBtn = document.getElementById('save-job-btn');
+
+        // Tutorial Modal elements (NEW)
+        const tutorialLink = document.getElementById('tutorial-link');
+        const tutorialModal = document.getElementById('tutorial-modal');
+        const closeTutorialModalBtn = document.getElementById('close-tutorial-modal-btn');
+        const closeTutorialModalBtnBottom = document.getElementById('close-tutorial-modal-btn-bottom');
+
 
         // --- Application State ---
         let jobRecords = []; // Stores all job records
@@ -459,33 +618,56 @@
         let currentSortColumn = 'time'; // Current column by which table is sorted
         let currentSortOrder = 'desc'; // Current sort order: 'asc' (ascending) or 'desc' (descending)
 
-        // --- Initialization on DOMContentLoaded ---
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize user info (ID persisted in localStorage)
-            userIdSpan.textContent = `ID: ${generateUserId()}`;
-            registrationTimeSpan.textContent = `注册时间: ${formatDate(new Date())}`;
-
-            populateYearMonthSelectors(); // Populate year/month dropdowns
-            loadJobRecords(); // Load records from localStorage
-            updateOverviewStats(); // Update overview statistics
-            renderJobTable(); // Render the job table
-            renderSubmissionsChart(); // Render the chart
-
-            // Initialize date inputs
-            const today = new Date();
-            modalTimeInput.value = formatDate(today); // Default today for modal
-            const oneMonthAgo = new Date(today);
-            oneMonthAgo.setMonth(today.getMonth() - 1);
-            filterStartDateInput.value = formatDate(oneMonthAgo); // Default filter start date
-            filterEndDateInput.value = formatDate(today); // Default filter end date
-
-            updateSortIcons(); // Set initial sort icons
-        });
-
         // --- Helper Functions ---
 
         /**
+         * Parses job input (link or text) to extract relevant information.
+         * @param {string} input The raw input string from the user.
+         * @returns {object} An object containing parsed job details.
+         */
+        function parseJobInput(input) {
+            input = input.trim();
+            const result = {
+                source: '',
+                company: '',
+                position: '',
+                keywords: '',
+                location: '',
+                notes: ''
+            };
+
+            const companies = ['阿里', '腾讯', '百度', '字节', '京东', '美团', '小红书'];
+            const positions = ['产品经理', '前端开发', '后端开发', 'UI设计', '运营', '数据分析'];
+            const cities = ['北京', '上海', '广州', '深圳', '杭州', '成都', '远程', '武汉', '南京', '苏州'];
+            const skills = ['Axure', 'Figma', 'Python', 'SQL', 'React', 'Vue', 'Java'];
+
+            if (/^https?:\/\//.test(input)) {
+                result.notes = `来源链接：${input}`;
+                if (input.includes('zhipin.com')) result.source = 'BOSS直聘';
+                else if (input.includes('liepin.com')) result.source = '猎聘';
+                else if (input.includes('bytedance') || input.includes('campus')) {
+                    result.source = '字节跳动';
+                    result.company = '字节跳动';
+                } else result.source = '其他平台';
+                result.position = '待填写'; // Default for links if not explicitly parsed
+                return result;
+            }
+
+            for (const c of companies) if (input.includes(c)) { result.company = c; break; }
+            for (const p of positions) if (input.includes(p)) { result.position = p; break; }
+            for (const city of cities) if (input.includes(city)) { result.location = city; break; }
+
+            const matchedSkills = skills.filter(skill =>
+                input.toLowerCase().includes(skill.toLowerCase())
+            );
+            result.keywords = matchedSkills.join(', ');
+            result.notes = `原始输入：${input}`;
+            return result;
+        }
+
+        /**
          * Generates a simple user ID and persists it in localStorage.
+         * Also stores registration time if not present.
          * @returns {string} The user ID.
          */
         function generateUserId() {
@@ -493,8 +675,17 @@
             if (!userId) {
                 userId = `user_${Math.random().toString(36).substr(2, 9)}`;
                 localStorage.setItem('jobTrackUserId', userId);
+                localStorage.setItem('jobTrackRegistrationTime', formatDate(new Date()));
             }
             return userId;
+        }
+
+        /**
+         * Gets the registration time from localStorage.
+         * @returns {string} The registration time string.
+         */
+        function getRegistrationTime() {
+            return localStorage.getItem('jobTrackRegistrationTime') || 'N/A';
         }
 
         /**
@@ -521,6 +712,15 @@
                     // Convert date strings back to Date objects
                     jobRecords.forEach(record => {
                         record.time = new Date(record.time);
+                        // Ensure all fields exist with default values if missing (for older records)
+                        record.company = record.company || '';
+                        record.position = record.position || '';
+                        record.keywords = record.keywords || '';
+                        record.industry = record.industry || '';
+                        record.status = record.status || '投递';
+                        record.location = record.location || '';
+                        record.notes = record.notes || '';
+                        record.level = record.level || '中';
                     });
                 }
             } catch (e) {
@@ -640,21 +840,23 @@
                 displayedRecords.forEach(job => {
                     const row = tbody.insertRow();
                     row.classList.add('hover-row', 'transition-all', 'duration-150');
+                    row.dataset.id = job.id; // Store ID on the row for easy lookup
+
                     row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${formatDate(job.time)}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${job.company}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${job.position}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${job.keywords}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${job.industry}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" data-field="time">${formatDate(job.time)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" data-field="company">${job.company}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" data-field="position">${job.position}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" data-field="keywords">${job.keywords}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" data-field="industry">${job.industry}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(job.status)}">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(job.status)}" data-field="status">
                                 ${job.status}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${job.location}</td>
-                        <td class="px-6 py-4 text-sm text-gray-700 whitespace-pre-wrap">${job.notes || '无'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" data-field="location">${job.location}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700 whitespace-pre-wrap" data-field="notes">${job.notes || '无'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                            <span class="${getLevelBadgeClass(job.level)}">${job.level}</span>
+                            <span class="${getLevelBadgeClass(job.level)}" data-field="level">${job.level}</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button data-id="${job.id}" class="edit-btn text-blue-600 hover:text-blue-900 mr-3"><i class="fas fa-edit"></i></button>
@@ -728,6 +930,7 @@
 
         /**
          * Attaches event listeners to edit and delete buttons in the table.
+         * Also enables direct editing on table cells.
          */
         function addJobTableEventListeners() {
             document.querySelectorAll('.edit-btn').forEach(button => {
@@ -736,7 +939,241 @@
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.onclick = (e) => showCustomConfirm("确定要删除这条岗位记录吗？", () => confirmDeleteJob(e.currentTarget.dataset.id));
             });
+
+            // Enable direct editing on table cells
+            document.querySelectorAll('#job-entries-tbody td[data-field]').forEach(cell => {
+                // Prevent '操作' column from being editable
+                if (cell.closest('tr').lastElementChild === cell.parentNode) return; // Skip the action column cell itself
+
+                cell.addEventListener('dblclick', (e) => {
+                    const targetCell = e.target.closest('td[data-field]'); // Ensure we get the td
+                    if (!targetCell) return;
+
+                    const jobId = targetCell.closest('tr').dataset.id;
+                    const field = targetCell.dataset.field;
+
+                    if (!jobId || !field || targetCell.classList.contains('editing')) return; // Prevent multiple edits on same cell
+
+                    targetCell.classList.add('editing');
+                    targetCell.setAttribute('contenteditable', 'true');
+                    targetCell.focus();
+
+                    // Handle different input types
+                    let originalValue = targetCell.textContent.trim();
+                    let inputElement = targetCell; // Default to the cell itself for contenteditable
+
+                    let tempSaveChanges = () => { // Define a temporary saveChanges for this scope
+                        const jobIndex = jobRecords.findIndex(job => job.id == jobId);
+                        if (jobIndex === -1) return;
+
+                        let newValue;
+                        if (field === 'status' || field === 'level' || field === 'time' || field === 'notes') {
+                            newValue = inputElement.value;
+                        } else if (field === 'location') {
+                            // Special handling for location field in table direct edit
+                            const selectElement = inputElement.querySelector('select');
+                            const otherInput = inputElement.querySelector('input[type="text"]');
+                            if (selectElement && selectElement.value === '其他') {
+                                newValue = otherInput ? otherInput.value.trim() : '';
+                            } else if (selectElement) {
+                                newValue = selectElement.value.trim();
+                            } else {
+                                newValue = inputElement.textContent.trim(); // Fallback for safety
+                            }
+                        } else {
+                            newValue = inputElement.textContent.trim();
+                        }
+
+                        // Update the job record
+                        if (field === 'time') {
+                            jobRecords[jobIndex][field] = new Date(newValue);
+                        } else {
+                            jobRecords[jobIndex][field] = newValue;
+                        }
+
+                        saveJobRecords();
+                        updateOverviewStats(); // Status changes might affect counts
+                        renderJobTable(); // Re-render the entire table to apply changes correctly and refresh event listeners
+                    };
+
+
+                    if (field === 'status') {
+                        inputElement = document.createElement('select');
+                        inputElement.classList.add('w-full', 'p-1', 'border', 'rounded', 'bg-white', 'text-gray-700', 'focus:ring-blue-500', 'focus:border-blue-500');
+                        const statusOptions = ['投递', '测评', '笔试', '一面', '二面', '终面', 'HR面', 'OC', '拒绝'];
+                        statusOptions.forEach(optionText => {
+                            const option = document.createElement('option');
+                            option.value = optionText;
+                            option.textContent = optionText;
+                            inputElement.appendChild(option);
+                        });
+                        inputElement.value = originalValue;
+                        targetCell.innerHTML = '';
+                        targetCell.appendChild(inputElement);
+                        inputElement.focus();
+                    } else if (field === 'level') {
+                        inputElement = document.createElement('select');
+                        inputElement.classList.add('w-full', 'p-1', 'border', 'rounded', 'bg-white', 'text-gray-700', 'focus:ring-blue-500', 'focus:border-blue-500');
+                        const levelOptions = ['低', '中', '高'];
+                        levelOptions.forEach(optionText => {
+                            const option = document.createElement('option');
+                            option.value = optionText;
+                            option.textContent = optionText;
+                            inputElement.appendChild(option);
+                        });
+                        inputElement.value = originalValue;
+                        targetCell.innerHTML = '';
+                        targetCell.appendChild(inputElement);
+                        inputElement.focus();
+                    } else if (field === 'time') {
+                        inputElement = document.createElement('input');
+                        inputElement.type = 'date';
+                        inputElement.classList.add('w-full', 'p-1', 'border', 'rounded', 'bg-white', 'text-gray-700', 'focus:ring-blue-500', 'focus:border-blue-500');
+                        inputElement.value = originalValue; // Should be YYYY-MM-DD
+                        targetCell.innerHTML = '';
+                        targetCell.appendChild(inputElement);
+                        inputElement.focus();
+                    } else if (field === 'notes') {
+                        // For notes, use a textarea for better multi-line input
+                        inputElement = document.createElement('textarea');
+                        inputElement.classList.add('w-full', 'p-1', 'border', 'rounded', 'bg-white', 'text-gray-700', 'focus:ring-blue-500', 'focus:border-blue-500', 'resize-y');
+                        inputElement.value = originalValue;
+                        targetCell.innerHTML = '';
+                        targetCell.appendChild(inputElement);
+                        inputElement.focus();
+                        inputElement.style.height = 'auto'; // Reset height
+                        inputElement.style.height = inputElement.scrollHeight + 'px'; // Adjust to content
+                        inputElement.addEventListener('input', () => { // Auto-resize
+                            inputElement.style.height = 'auto';
+                            inputElement.style.height = inputElement.scrollHeight + 'px';
+                        });
+                    } else if (field === 'location') {
+                        // Special handling for location field in table direct edit
+                        const wrapperDiv = document.createElement('div');
+                        wrapperDiv.classList.add('flex', 'flex-col', 'gap-1'); // Add gap for spacing
+                        inputElement = document.createElement('select');
+                        inputElement.classList.add('w-full', 'p-1', 'border', 'rounded', 'bg-white', 'text-gray-700', 'focus:ring-blue-500', 'focus:border-blue-500');
+                        const locationOptions = ["", "北京", "上海", "广州", "深圳", "杭州", "成都", "武汉", "南京", "苏州", "远程", "不限", "其他"];
+                        locationOptions.forEach(optionText => {
+                            const option = document.createElement('option');
+                            option.value = optionText;
+                            option.textContent = optionText === "" ? "请选择地点" : optionText;
+                            inputElement.appendChild(option);
+                        });
+                        wrapperDiv.appendChild(inputElement);
+
+                        const otherTextInput = document.createElement('input');
+                        otherTextInput.type = 'text';
+                        otherTextInput.placeholder = '请填写具体地点';
+                        otherTextInput.classList.add('w-full', 'p-1', 'border', 'rounded', 'bg-white', 'text-gray-700', 'focus:ring-blue-500', 'focus:border-blue-500');
+                        otherTextInput.classList.add('hidden'); // Initially hidden
+                        wrapperDiv.appendChild(otherTextInput);
+
+                        targetCell.innerHTML = '';
+                        targetCell.appendChild(wrapperDiv); // Append the wrapper div
+
+                        // If the original value is not in the select options, assume it's '其他'
+                        if (!locationOptions.includes(originalValue) && originalValue !== "") {
+                            inputElement.value = '其他';
+                            otherTextInput.value = originalValue;
+                            otherTextInput.classList.remove('hidden');
+                        }
+
+                        // Event listener for the select dropdown in the table cell
+                        inputElement.addEventListener('change', () => {
+                            if (inputElement.value === '其他') {
+                                otherTextInput.classList.remove('hidden');
+                                otherTextInput.focus();
+                            } else {
+                                otherTextInput.classList.add('hidden');
+                                otherTextInput.value = '';
+                            }
+                        });
+                        // Set inputElement to the select element for general blur/keydown handling
+                        inputElement = inputElement; // Keep inputElement referring to the select for consistency
+                        inputElement.focus();
+                    }
+
+
+                    const revertChanges = () => {
+                        // Revert to original value
+                        if (field === 'location') {
+                            // For location, we need to revert the whole cell's content
+                            targetCell.textContent = originalValue;
+                        } else if (inputElement !== targetCell) { // If a new input element was created
+                            targetCell.innerHTML = originalValue; // Restore original text content
+                        } else { // If contenteditable
+                            targetCell.textContent = originalValue;
+                        }
+                        targetCell.classList.remove('editing');
+                        targetCell.removeAttribute('contenteditable');
+                        removeEventListeners(inputElement, tempSaveChanges, revertChanges, handleKeydown);
+                    };
+
+                    const removeEventListeners = (element, saveFunc, revertFunc, keydownFunc) => {
+                        // Check if element is select/textarea for 'change' event
+                        if (element.tagName === 'SELECT' || element.tagName === 'TEXTAREA' || element.type === 'date' || field === 'location') {
+                            element.removeEventListener('change', saveFunc);
+                            // If location field, remove listeners from both select and text input if '其他' was shown
+                            if (field === 'location') {
+                                const otherInput = targetCell.querySelector('input[type="text"]');
+                                if (otherInput) otherInput.removeEventListener('blur', saveFunc);
+                                if (otherInput) otherInput.removeEventListener('keydown', keydownFunc);
+                            }
+                        }
+                        element.removeEventListener('blur', saveFunc);
+                        element.removeEventListener('keydown', keydownFunc);
+                    };
+
+
+                    const handleKeydown = (event) => {
+                        if (event.key === 'Enter' && field !== 'notes') { // Enter to save, unless it's a textarea
+                            event.preventDefault(); // Prevent new line in contenteditable
+                            tempSaveChanges();
+                            targetCell.blur(); // Trigger blur to finalize changes
+                        } else if (event.key === 'Escape') {
+                            revertChanges();
+                            targetCell.blur();
+                        }
+                    };
+
+                    // Attach event listeners
+                    if (field === 'location') {
+                        // For location, attach blur/change to the select and keydown to both select and potential text input
+                        const selectElement = targetCell.querySelector('select');
+                        const otherInput = targetCell.querySelector('input[type="text"]');
+
+                        if (selectElement) {
+                            selectElement.addEventListener('blur', tempSaveChanges);
+                            selectElement.addEventListener('change', tempSaveChanges);
+                            selectElement.addEventListener('keydown', handleKeydown);
+                        }
+                        if (otherInput) {
+                            otherInput.addEventListener('blur', tempSaveChanges);
+                            otherInput.addEventListener('keydown', handleKeydown);
+                        }
+                    } else if (inputElement.tagName === 'SELECT' || inputElement.tagName === 'TEXTAREA' || inputElement.type === 'date') { // For generated input/select/textarea elements
+                        inputElement.addEventListener('blur', tempSaveChanges);
+                        inputElement.addEventListener('change', tempSaveChanges); // For select/date
+                        inputElement.addEventListener('keydown', handleKeydown);
+                    } else { // For contenteditable cells (default case)
+                        targetCell.addEventListener('blur', tempSaveChanges);
+                        targetCell.addEventListener('keydown', handleKeydown);
+                    }
+
+
+                    // Select all text in contenteditable cell
+                    if (inputElement === targetCell && field !== 'notes') {
+                        const range = document.createRange();
+                        range.selectNodeContents(targetCell);
+                        const selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                });
+            });
         }
+
 
         /**
          * Renders the D3.js chart based on the selected period (weekly bar or monthly line).
@@ -798,6 +1235,8 @@
             } else { // monthly
                 chartType = 'line';
                 let chartDataMap = {};
+                const selectedYear = yearSelect.value;
+                const selectedMonth = monthSelect.value;
                 const daysInMonth = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).getDate();
 
                 for (let i = 1; i <= daysInMonth; i++) {
@@ -832,8 +1271,6 @@
                 } else {
                     noChartDataMessage.classList.add('hidden');
                 }
-
-
             }
             // Hide monthly selectors if not in monthly view
             if (currentChartPeriod !== 'monthly') {
@@ -939,61 +1376,56 @@
             mainNav.classList.toggle('hidden');
         });
 
+        // Handle location select and 'other' input联动
+        modalLocationInput.addEventListener('change', () => {
+            if (modalLocationInput.value === '其他') {
+                modalLocationOtherInput.classList.remove('hidden');
+                modalLocationOtherInput.focus();
+            } else {
+                modalLocationOtherInput.classList.add('hidden');
+                modalLocationOtherInput.value = ''; // Clear '其他' input
+            }
+        });
+
         // Parse job link or text
         parseJobBtn.addEventListener('click', () => {
-            const input = parseJobInput.value.trim();
+            const input = parseJobInputElem.value.trim();
             if (!input) {
                 showCustomAlert('请输入岗位链接或文字！');
                 return;
             }
 
-            let company = '';
-            let position = '';
-            let notes = '';
-            let industry = '';
-            let keywords = '';
-            let location = '';
+            const parsed = parseJobInput(input);
 
-            if (input.startsWith('http://') || input.startsWith('https://')) {
-                try {
-                    const url = new URL(input);
-                    company = url.hostname.split('.')[1] || url.hostname;
-                    position = url.pathname.split('/').pop() || '';
-                    if (position.includes('/') && position.length > 20) position = ''; // If path is too complex/long, clear it
-                    notes = `来自链接: ${input}`;
-                } catch (e) {
-                    showCustomAlert('无效的链接格式，请手动填写。');
-                    notes = `原始输入: ${input}`;
-                }
+            // Pre-fill modal with parsed data
+            modalTitle.textContent = '添加新岗位 (解析)';
+            modalTimeInput.value = formatDate(new Date()); // Default to today
+            modalCompanyInput.value = parsed.company;
+            modalPositionInput.value = parsed.position;
+            modalKeywordsInput.value = parsed.keywords;
+            modalIndustryInput.value = ''; // Industry is not parsed by the new function, so leave empty or default
+            modalStatusSelect.value = '投递'; // Default status
+
+            // Handle parsed location for modal
+            if (parsed.location && Array.from(modalLocationInput.options).some(option => option.value === parsed.location)) {
+                modalLocationInput.value = parsed.location;
+                modalLocationOtherInput.classList.add('hidden');
+                modalLocationOtherInput.value = '';
+            } else if (parsed.location) {
+                modalLocationInput.value = '其他';
+                modalLocationOtherInput.classList.remove('hidden');
+                modalLocationOtherInput.value = parsed.location;
             } else {
-                // Attempt to parse from text: Company, Position, Keywords, Industry, Location, Notes
-                const parts = input.split(/[,，\s]+/);
-                if (parts.length > 0) {
-                    company = parts[0] || '';
-                    position = parts[1] || '';
-                    keywords = parts[2] || '';
-                    industry = parts[3] || '';
-                    location = parts[4] || '';
-                    notes = parts.slice(5).join(', ') || input;
-                } else {
-                    position = input; // If only one part, assume it's the position
-                }
+                modalLocationInput.value = ''; // Default to empty/first option
+                modalLocationOtherInput.classList.add('hidden');
+                modalLocationOtherInput.value = '';
             }
 
-            // Pre-fill modal and open it
-            modalTitle.textContent = '添加新岗位 (解析)';
-            modalTimeInput.value = formatDate(new Date());
-            modalCompanyInput.value = company;
-            modalPositionInput.value = position;
-            modalKeywordsInput.value = keywords;
-            modalIndustryInput.value = industry;
-            modalStatusSelect.value = '投递'; // Default status
-            modalLocationInput.value = location;
-            modalNotesInput.value = notes;
+            modalNotesInput.value = parsed.notes;
             modalLevelSelect.value = '中'; // Default level
             currentEditingJobId = null; // Ensure it's in add mode
 
-            jobModal.classList.remove('hidden');
+            jobModal.classList.remove('hidden'); // This line ensures the modal opens
         });
 
         // Toggle chart period (Weekly/Monthly)
@@ -1017,14 +1449,17 @@
         addNewJobBtn.addEventListener('click', () => {
             modalTitle.textContent = '添加新岗位';
             jobForm.reset(); // Clear form fields
-            modalTimeInput.value = formatDate(new Date()); // Default to current date
-            modalStatusSelect.value = '投递'; // Ensure default status is '投递'
-            modalLevelSelect.value = '中'; // Ensure default level is '中'
+            modalTimeInput.value = formatDate(new Date()); // Set default date to today
+            modalStatusSelect.value = '投递'; // Set default status
+            modalLevelSelect.value = '中'; // Set default level
+            modalLocationInput.value = ''; // Default for location
+            modalLocationOtherInput.classList.add('hidden'); // Hide other input
+            modalLocationOtherInput.value = ''; // Clear other input
             currentEditingJobId = null; // Clear editing state
             jobModal.classList.remove('hidden');
         });
 
-        // Hide modal
+        // Hide job modal
         cancelModalBtn.addEventListener('click', () => {
             jobModal.classList.add('hidden');
         });
@@ -1033,17 +1468,20 @@
         jobForm.addEventListener('submit', (e) => {
             e.preventDefault();
 
+            // Get location based on select value
+            const finalLocation = modalLocationInput.value === '其他' ? modalLocationOtherInput.value.trim() : modalLocationInput.value.trim();
+
             const newJob = {
                 id: currentEditingJobId || Date.now(), // Use existing ID for edit, new timestamp for add
-                time: new Date(modalTimeInput.value),
+                time: new Date(modalTimeInput.value), // Get from modal
                 company: modalCompanyInput.value.trim(),
                 position: modalPositionInput.value.trim(),
                 keywords: modalKeywordsInput.value.trim(),
                 industry: modalIndustryInput.value.trim(),
-                status: modalStatusSelect.value,
-                location: modalLocationInput.value.trim(),
+                status: modalStatusSelect.value, // Get from modal
+                location: finalLocation, // Use the determined final location
                 notes: modalNotesInput.value.trim(),
-                level: modalLevelSelect.value,
+                level: modalLevelSelect.value, // Get from modal
             };
 
             // Simple form validation
@@ -1079,13 +1517,26 @@
             if (job) {
                 modalTitle.textContent = '编辑岗位';
                 currentEditingJobId = job.id;
+                // Populate all fields in the modal
                 modalTimeInput.value = formatDate(job.time);
                 modalCompanyInput.value = job.company;
                 modalPositionInput.value = job.position;
                 modalKeywordsInput.value = job.keywords;
                 modalIndustryInput.value = job.industry;
                 modalStatusSelect.value = job.status;
-                modalLocationInput.value = job.location;
+
+                // Handle location field for edit
+                const locationOptions = Array.from(modalLocationInput.options).map(option => option.value);
+                if (locationOptions.includes(job.location)) {
+                    modalLocationInput.value = job.location;
+                    modalLocationOtherInput.classList.add('hidden');
+                    modalLocationOtherInput.value = '';
+                } else {
+                    modalLocationInput.value = '其他';
+                    modalLocationOtherInput.classList.remove('hidden');
+                    modalLocationOtherInput.value = job.location;
+                }
+
                 modalNotesInput.value = job.notes;
                 modalLevelSelect.value = job.level;
                 jobModal.classList.remove('hidden');
@@ -1191,6 +1642,37 @@
             document.getElementById('confirm-cancel-btn').onclick = () => confirmModal.remove();
         }
 
+        // --- Tutorial Modal Logic (NEW) ---
+        tutorialLink.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            tutorialModal.classList.remove('hidden');
+        });
+
+        closeTutorialModalBtn.addEventListener('click', () => {
+            tutorialModal.classList.add('hidden');
+        });
+        closeTutorialModalBtnBottom.addEventListener('click', () => {
+            tutorialModal.classList.add('hidden');
+        });
+
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            userIdSpan.textContent = `ID: ${generateUserId()}`;
+            registrationTimeSpan.textContent = `注册时间: ${getRegistrationTime()}`;
+            loadJobRecords();
+            updateOverviewStats();
+            renderJobTable();
+            populateYearMonthSelectors(); // Populate year/month dropdowns
+            renderSubmissionsChart(); // Initial chart render (weekly by default)
+
+            // Set default date range for filters
+            const today = new Date().toISOString().slice(0, 10);
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+            filterStartDateInput.value = formatDate(oneMonthAgo);
+            filterEndDateInput.value = today;
+        });
     </script>
 </body>
 
